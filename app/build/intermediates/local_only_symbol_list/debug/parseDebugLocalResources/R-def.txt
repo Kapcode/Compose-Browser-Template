@@ -12,6 +12,6 @@ drawable ic_launcher_foreground
 mipmap ic_launcher
 mipmap ic_launcher_round
 string app_name
-style Theme.LearnWithAi
+style Theme.ComposeBrowserTemplate
 xml backup_rules
 xml data_extraction_rules

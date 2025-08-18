@@ -190,7 +190,7 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\prospet0\.gradle\c
 	android:allowBackup
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:7:9-35
 	android:theme
-		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:14:9-49
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:14:9-60
 	android:dataExtractionRules
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:8:9-65
 activity#com.kapcode.ComposeBrowserTemplate.MainActivity
@@ -200,7 +200,7 @@ ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\
 	android:exported
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:18:13-36
 	android:theme
-		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:20:13-53
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:20:13-64
 	android:name
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:17:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER

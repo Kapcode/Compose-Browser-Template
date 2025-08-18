@@ -69,8 +69,8 @@
 44        android:supportsRtl="true"
 44-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:13:9-35
 45        android:testOnly="true"
-46        android:theme="@style/Theme.LearnWithAi" >
-46-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:14:9-49
+46        android:theme="@style/Theme.ComposeBrowserTemplate" >
+46-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:14:9-60
 47        <activity
 47-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:16:9-26:20
 48            android:name="com.kapcode.ComposeBrowserTemplate.MainActivity"
@@ -79,8 +79,8 @@
 49-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:18:13-36
 50            android:label="@string/app_name"
 50-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:19:13-45
-51            android:theme="@style/Theme.LearnWithAi" >
-51-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:20:13-53
+51            android:theme="@style/Theme.ComposeBrowserTemplate" >
+51-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:20:13-64
 52            <intent-filter>
 52-->C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:21:13-25:29
 53                <action android:name="android.intent.action.MAIN" />

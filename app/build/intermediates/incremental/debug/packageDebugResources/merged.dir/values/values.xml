@@ -8,5 +8,5 @@
     <color name="teal_700">#FF018786</color>
     <color name="white">#FFFFFFFF</color>
     <string name="app_name">Compose-Browser-Template</string>
-    <style name="Theme.LearnWithAi" parent="android:Theme.Material.Light.NoActionBar"/>
+    <style name="Theme.ComposeBrowserTemplate" parent="android:Theme.Material.Light.NoActionBar"/>
 </resources>
