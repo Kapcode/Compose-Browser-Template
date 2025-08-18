@@ -1,0 +1,1 @@
+export const minimalConstant = "Hello from minimal constants";
