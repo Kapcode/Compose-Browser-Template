@@ -661,13 +661,7 @@ const complexSvgString = `
         }
 
 
-        // (Your utility functions: updateScoreDisplay, showScoresplat - need to use gameAreaViewBoxWidth/Height)
-        function updateScoreDisplay() {
-            const scoreTextTemplate = document.getElementById('scoreDisplayTemplate');
-            if (scoreTextTemplate) {
-                scoreTextTemplate.textContent = `Score: ${score}`;
-            }
-        }
+
 
         // --- Game Element Creation ---
         // --- Game Element Creation ---
@@ -917,7 +911,7 @@ const complexSvgString = `
         }
 
 
-        function stopGame() {
+        function stopGame_decarationuneaded() {
             gameStopped = true; // Mark the game as fully stopped
             gamePaused = false; // Clear paused state
             if (animationFrameId) {
