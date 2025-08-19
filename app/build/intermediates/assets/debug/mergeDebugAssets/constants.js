@@ -1,6 +1,17 @@
 // Assume liveGameArea, logSVG, instanceCounter, swipeState, gamePaused, timeWhenPauseActuallyStarted,
 // handleDocumentPointerMove, handleDocumentPointerEnd are defined in the broader scope.
-export const pickle_svgString =`<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+export const simplePickleSvgString = `<svg width="100" height="200" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+  <g id="simplePickleGroup">
+    <path id="pickleBody" d="M 50,10 C 20,20 10,70 25,120 C 15,170 30,190 50,190 C 70,190 85,170 75,120 C 90,70 80,20 50,10 Z" fill="#2E7D32" stroke="#1B5E20" stroke-width="2"/>
+    <circle id="bump1" cx="30" cy="60" r="5" fill="#4CAF50"/>
+    <circle id="bump2" cx="65" cy="90" r="6" fill="#4CAF50"/>
+    <ellipse id="bump3" cx="40" cy="150" rx="7" ry="4" fill="#4CAF50"/>
+    <path id="highlight" d="M 50,25 C 60,50 65,80 60,110" fill="none" stroke="#66BB6A" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>
+`;
+
+export const pickle_svgString = `<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="100%" viewBox="0 0 540 1290" enable-background="new 0 0 540 1290" xml:space="preserve">
 <path fill="#000000" opacity="1.000000" stroke="none" 
 	d="
@@ -6727,113 +6738,3 @@ M190.502899,332.927826
 	C205.000992,332.529938 197.966827,336.603973 190.502899,332.927826 
 z"/>
 </svg>`;
-function createInstanceFromSVGString(svgString, addSwipeListeners = true, assignUniqueIdToRoot = false, rootIdPrefix = 'parsedInstance_') {
-    if (!liveGameArea) {
-        console.error("FAILED: liveGameArea is NULL.", liveGameArea);
-        return null;
-    }
-
-    if (typeof svgString !== 'string' || svgString.trim() === '') {
-        console.error("FAILED: svgString is empty or not a string.", svgString);
-        return null;
-    }
-
-    instanceCounter++; // Keep for unique IDs if needed
-
-    // 1. Prepare the string for the parser
-    // DOMParser typically expects a well-formed XML document.
-    // If the svgString is just a fragment (e.g., just "<g>...</g>"),
-    // wrap it in an <svg> tag for robust parsing.
-    // If it's already a full <svg>...</svg> document, this is usually okay too.
-    const wrappedSvgString = svgString.trim().startsWith('<svg') ?
-        svgString :
-        `<svg xmlns="http://www.w3.org/2000/svg">${svgString}</svg>`;
-
-    if (logSVG) console.log("String to parse:", wrappedSvgString);
-
-    // 2. Parse the SVG string
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(wrappedSvgString, "image/svg+xml");
-
-    // Check for parser errors
-    const parserError = svgDoc.querySelector("parsererror");
-    if (parserError) {
-        console.error("PARSER ERROR details:", parserError.textContent);
-        console.error("Original string that caused error:", wrappedSvgString);
-        return null;
-    }
-
-    // 3. Extract the desired element
-    // If we wrapped it, the desired element is the first child of the documentElement (<svg>).
-    // If the original string was already a full <svg> document, then documentElement is what we want.
-    let newElement = svgDoc.documentElement;
-    if (!svgString.trim().startsWith('<svg') && newElement && newElement.firstChild) {
-        newElement = newElement.firstChild; // Get the actual element from our <svg> wrapper
-    }
-
-
-    if (!newElement || typeof newElement.cloneNode !== 'function') {
-        console.error("Failed to parse or extract a valid SVG element from the string. newElement:", newElement);
-        return null;
-    }
-
-    // 4. Clone and optionally assign a unique ID to the root of the parsed content
-    const clone = newElement.cloneNode(true); // Always work with a clone
-
-    if (assignUniqueIdToRoot) {
-        const uniqueId = `${rootIdPrefix}${instanceCounter}`;
-        clone.setAttribute('id', uniqueId);
-        if (logSVG) console.log(`Assigned unique ID to root: ${uniqueId}`);
-    }
-
-
-    // 5. Append to the main SVG area
-    liveGameArea.appendChild(clone);
-    if (logSVG) {
-        const appendedId = clone.getAttribute('id') || '(no id)';
-        console.log(`Successfully parsed and appended element. ID: ${appendedId}`);
-    }
-
-    // 6. Add swipe functionality (or other event listeners)
-    if (addSwipeListeners) {
-        clone.addEventListener('pointerdown', (event) => {
-            if (swipeState.activeElement) return;
-
-            // --- IMPLICIT PAUSE --- (Your existing logic)
-            if (!gamePaused) {
-                gamePaused = true;
-                timeWhenPauseActuallyStarted = performance.now();
-                if (logSVG || gameStateLogs) console.log("Game implicitly paused for swipe on element:", clone.id);
-            }
-
-            if (event.pointerType === 'mouse' && event.button !== 0) return;
-
-            swipeState.startX = event.clientX;
-            swipeState.startY = event.clientY;
-            swipeState.startTime = performance.now();
-            swipeState.activeElement = clone;
-            swipeState.pointerId = event.pointerId;
-
-            try {
-                clone.setPointerCapture(event.pointerId);
-            } catch (e) {
-                console.warn("Could not set pointer capture on clone:", e);
-            }
-
-            document.addEventListener('pointermove', handleDocumentPointerMove, { passive: false }); // Consider passive based on need
-            document.addEventListener('pointerup', handleDocumentPointerEnd);
-            document.addEventListener('pointercancel', handleDocumentPointerEnd);
-
-            event.preventDefault(); // Often good for drag interactions
-            if (logSVG || gameStateLogs) console.log(`Pointer DOWN on ${clone.id || 'parsed element'}, captured pointerId: ${event.pointerId}`);
-
-
-            const rect = swipeState.activeElement.getBoundingClientRect();
-            swipeState.offsetX = event.clientX - rect.left;
-            swipeState.offsetY = event.clientY - rect.top;
-            swipeState.isDragging = true;
-        });
-    }
-
-    return clone; // Return the appended clone
-}

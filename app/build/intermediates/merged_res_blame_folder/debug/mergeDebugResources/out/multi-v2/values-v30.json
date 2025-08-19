@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.kapcode.ComposeBrowserTemplate.app-mergeDebugResources-67:/values-v30/values-v30.xml",
+            "outputFile": "com.kapcode.ComposeBrowserTemplate.app-mergeDebugResources-68:/values-v30/values-v30.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\prospet0\\.gradle\\caches\\transforms-4\\9ca44522390250c17c0b9ee0eccc48e3\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "source": "C:\\Users\\prospet0\\.gradle\\caches\\transforms-4\\292926165c65a6b48db8198bd69ed95b\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

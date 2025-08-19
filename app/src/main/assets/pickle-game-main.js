@@ -1,4 +1,6 @@
-import { pickle_svgString } from './constants.js';
+import { simplePickleSvgString } from './constants.js';
+import { pickle_svgString } from './constants.js';  // Import the SVG string from constants.js
+
 const svgNS = "http://www.w3.org/2000/svg";
         let simpleGroup = `<g id="simplegroup"> 
             <rect id="background" width="380" height="60" rx="5" ry="5" fill="lightblue" stroke="blue"/>
@@ -73,6 +75,10 @@ const svgNS = "http://www.w3.org/2000/svg";
             activeElement: null,
             pointerId: null // To correctly track which pointer interaction we're following
         };
+
+
+
+        
         let gameTimeAccumulator = 0;
         // These constants should also be in a scope accessible by the handlers
         const MIN_SWIPE_DISTANCE_X = 50;      // Minimum horizontal distance to qualify as a swipe
@@ -303,43 +309,8 @@ const svgNS = "http://www.w3.org/2000/svg";
         // --- Function to create a full group instance with text and ellipse ---  
         
 
-let pickel_svgStringValue = pickle_svgString; // Set to true to use the complex SVG, false for simple group
-const complexSvgString = `
-<g id="complexAssetRoot" transform="translate(10, 10) scale(1.5)">
-    <title>Complex SVG Asset Example</title>
-    <desc>An example showcasing nested groups, paths, defs, and transforms.</desc>
-    <defs>
-        <linearGradient id="coolGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#4A00E0; stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#8E2DE2; stop-opacity:1" />
-        </linearGradient>
-        <filter id="glowEffect">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        </filter>
-    </defs>
-    <path id="mainBody" d="M 50,5 A 45,45 0 0 1 95,50 L 95,95 A 45,45 0 0 1 50,140 L 5,95 L 5,50 A 45,45 0 0 1 50,5 Z" fill="url(#coolGradient)" stroke="#FFFFFF" stroke-width="0.5" filter="url(#glowEffect)" />
-    <g id="innerCore" transform="translate(50, 72) rotate(45)">
-        <rect x="-15" y="-15" width="30" height="30" fill="#00FFD1" stroke="#000000" stroke-width="0.3" rx="3"/>
-        <circle cx="0" cy="0" r="8" fill="#FF007F" />
-    </g>
-    <g id="decorativeArms">
-        <path id="armLeft" d="M5,50 C 15,30 15,110 5,90" fill="none" stroke="#FFF700" stroke-width="1" stroke-linecap="round" />
-        <path id="armRight" d="M95,50 C 85,30 85,110 95,90" fill="none" stroke="#FFF700" stroke-width="1" stroke-linecap="round" />
-    </g>
-    <g id="statusLights" transform="translate(30, 125)">
-        <circle cx="0" cy="0" r="3" fill="#FF4E50" />
-        <circle cx="10" cy="0" r="3" fill="#FC913A" />
-        <circle cx="20" cy="0" r="3" fill="#F9D423" />
-        <circle cx="30" cy="0" r="3" fill="#EDE574" />
-        <circle cx="40" cy="0" r="3" fill="#E1F5C4" />
-    </g>
-    <text id="assetLabel" x="50" y="152" font-family="Verdana, sans-serif" font-size="6" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">SYS_ACTIVE</text>
-</g>
-`;
+let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the complex SVG, false for simple group
+
 
         /**
          * Creates an SVG instance from a string, appends it to the live game area,
@@ -653,7 +624,11 @@ const complexSvgString = `
                 console.log("Score splat finished, game logic can resume (if not otherwise paused).");
                 // Deactivate visual cue for this pause if you had one.
                 //TODO unimplicitpause here instead of elsewere
-                setPauseState(false); // Unpause the game after splat animation
+                if( gamePaused === false ) {
+                    console.log("Unpausing game after score splat animation."); 
+                    setPauseState(false); // Unpause the game after splat animation
+
+                }
 
 
             };
@@ -708,53 +683,10 @@ const complexSvgString = `
         // --- Game Loop Functions ---
         // ... (updateElementPositions and gameLoop remain largely the same) ...
         function updateElementPositions(deltaTime) {
-            for (let i = activeGameElements.length - 1; i >= 0; i--) {
-                const elem = activeGameElements[i];
-                elem.currentY += elem.speed * deltaTime;
-
-                const elementId = elem.element.id;
-                const liveElement = document.getElementById(elementId);
-
-                if (liveElement && (!gamePaused)) {
-                    liveElement.setAttribute('transform',
-                        `translate(${elem.currentX}, ${elem.currentY}) scale(${scale})`);
-                }
-
-
-                //get bottom of element
-                const botomY = elem.bottom = elem.currentY + (baseGroupHeight * scale); // Calculate bottom position based on currentY and height
-                const distanceToBottom = gameAreaViewBoxHeight - botomY;
-                const thresholdForApproachingBottom = 5; // Threshold for approaching the bottom
-                console.log(`Element ${elementId} bottom Y: ${botomY}, distance to bottom: ${distanceToBottom}`);
-                if (botomY > gameAreaViewBoxHeight) {
-                    console.log(`Element ${elementId} is out of bounds at Y: ${botomY}. Removing.`);
-                } else {
-                    //approuching the bottom of the viewBox
-                    if (distanceToBottom < thresholdForApproachingBottom) { // If within 50px of    the bottom
-                        console.log(`Element ${elementId} is approaching the bottom at Y: ${botomY}.`);
-                        setPauseState(true); // Pause the game if an element is approaching the bottom
-                        //todo add a visual cue for the player to not stress out, this is a no stress learning game
-                    } else {
-                        // Element is within bounds 
-                    }
-                    console.log(`Element ${elementId} is within bounds at Y: ${botomY}.`);
-                }
-
-
-
-                // Improved out-of-bounds cleanup
-                if (elem.currentY > gameAreaViewBoxHeight) {
-                    if (liveElement) {
-                        // Remove event listeners
-                        //liveElement.removeEventListener('click', handleWordBoxClick);
-                        // Remove from DOM
-                        liveGameArea.removeChild(liveElement);
-                    }
-                    // Remove from tracking array
-                    activeGameElements.splice(i, 1);
-                }
-            }
+          
         }
+
+
 
         const MAX_DELTA_TIME = 0.01666666667; // 100ms, your fixed time step in seconds
         // 0.01666666667 // 16.67ms, roughly 60 FPS
@@ -869,6 +801,9 @@ const complexSvgString = `
                 if (newComplexAsset) {
                     liveGameArea.appendChild(newComplexAsset); // Append to the live game area
                     console.log("Successfully parsed and appended complex SVG asset:", newComplexAsset.id);
+                    transformSVGElement(newComplexAsset, 100, 100, .2); // Example transform
+
+
                     // You could now further manipulate newComplexAsset if needed, e.g.,
                     // newComplexAsset.setAttribute('transform', 'translate(100, 100) scale(1.5)');
                     // Or target specific children by their ID if you know them:
@@ -888,6 +823,38 @@ const complexSvgString = `
         }
 
 
+        function transformSVGElement(element, x, y, scaleFactor) {
+    if (!element) {
+        console.error("Element to transform is not defined.");
+        return;
+    }
+
+    let scaleX, scaleY;
+    if (typeof scaleFactor === 'object' && scaleFactor !== null && 'sx' in scaleFactor && 'sy' in scaleFactor) {
+        scaleX = scaleFactor.sx;
+        scaleY = scaleFactor.sy;
+    } else if (typeof scaleFactor === 'number') {
+        scaleX = scaleFactor;
+        scaleY = scaleFactor;
+    } else {
+        console.warn("Invalid scaleFactor. Using scale(1,1). Provide a number or {sx, sy} object.");
+        scaleX = 1;
+        scaleY = 1;
+    }
+
+    // Order matters: typically scale then translate, or translate then scale affects the pivot point.
+    // If you want to scale around the element's local origin (0,0) and then move it:
+    const transformString = `translate(${x}, ${y}) scale(${scaleX}, ${scaleY})`;
+
+    // If you want to move the element's origin and then scale it around that new origin point
+    // (which means the x,y in translate are also scaled if scale comes first):
+    // const transformString = `scale(${scaleX}, ${scaleY}) translate(${x}, ${y})`;
+    // For most "place object at x,y and set its size" scenarios, `translate` then `scale` around its local origin is common.
+    // However, if your asset has its own internal origin that's not (0,0), this can get more complex.
+
+    element.setAttribute('transform', transformString);
+    console.log(`Applied transform: ${transformString} to element ID: ${element.id || 'N/A'}`);
+}
 
 
 
@@ -910,16 +877,15 @@ const complexSvgString = `
 
         }
 
-
-        function stopGame_decarationuneaded() {
-            gameStopped = true; // Mark the game as fully stopped
-            gamePaused = false; // Clear paused state
+// 4. Add cleanup on game stop
+        function stopGame() {
             if (animationFrameId) {
+                gameStopped = true; // Set game stopped flag
+                gamePaused = false; // Ensure game is not paused
+                console.log("Stopping game loop.");
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
-                console.log("Game stopped.");
-            } else {
-                console.log("Game is not running, cannot stop.");
+                console.log("Game loop stopped.");
             }
 
             // Clean up all active elements
@@ -935,6 +901,7 @@ const complexSvgString = `
 
             activeGameElements = [];
             lastTimestamp = 0;
+            
         }
 
         function pauseGame() {
@@ -1095,44 +1062,203 @@ const complexSvgString = `
 
             showScoresplat("GAME", "START!")
         }
-
-        // 4. Add cleanup on game stop
-        function stopGame() {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
+        function showGameControls() {
+            if (controlsOverlay) {
+                controlsOverlay.style.visibility = 'visible'; // Make controls overlay visible
+                controlsOverlay.style.display = 'block'; // Show controls overlay
+            } else {
+                console.error("Controls overlay not found.");
             }
-
-            // Clean up all active elements
-            activeGameElements.forEach(elem => {
-                if (elem.element) {
-                    //elem.element.removeEventListener('click', handleWordBoxClick);
-                    if (elem.element.parentNode) {
-                        elem.element.parentNode.removeChild(elem.element);
-                    }
-                    elem.element = null;
-                }
-            });
-
-            activeGameElements = [];
-            lastTimestamp = 0;
         }
+        function hideGameControls() {
+            if (controlsOverlay) {
+                controlsOverlay.style.visibility = 'hidden'; // Hide controls overlay   
 
-
+                controlsOverlay.style.display = 'none'; // Hide controls overlay
+            } else {    
+                console.error("Controls overlay not found.");
+            }   
+        }
+        function showWelcomeScreen(){
+            if (welcomeScreen) {
+                //welcomeScreen.style.display = 'flex'; // Show welcome screen
+                //welcomeScreen.style.visibility = 'visible'; // Make welcome screen visible
+                welcomeBackgroundImageContainer.style.display = 'block'; // Show background image container
+            } else {
+                console.error("Welcome screen not found.");
+            }
+        }
+        function hideWelcomeScreen() {
+            if (welcomeScreen) {
+                //welcomeScreen.style.display = 'none'; // Hide welcome screen
+                //welcomeScreen.style.visibility = 'hidden'; // Hide welcome screen
+                welcomeBackgroundImageContainer.style.display = 'none'; // Hide background image container
+            } else {
+                console.error("Welcome screen not found.");
+            }
+        }
+        let welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
+        let controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element 
+        let pauseButton = document.getElementById('pauseButton');
+        let welcomeScreen = document.getElementById('welcomeScreenOverlay');
+        let pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
+        let resumeButton = document.getElementById('resumeButton');
+        let startButton = document.getElementById('startGameButton');
+        let quitToMenuButton = document.getElementById('quitToMenuButton'); //  
         // Initial Setup
         updateScoreDisplay();
 
-        document.addEventListener('DOMContentLoaded', () => {
+        
+// Get references to any UI elements you might use for messages
+const rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
+
+
+        /**
+ * Checks the current screen orientation and takes appropriate action.
+ * This function will be our main handler.
+ */
+function handleOrientationChange() {
+    let currentOrientation = '';
+    if (screen.orientation && screen.orientation.type) {
+        currentOrientation = screen.orientation.type;
+        console.log(`Screen Orientation API: ${currentOrientation}`);
+    } else if (window.matchMedia("(orientation: landscape)").matches) {
+        currentOrientation = 'landscape-primary'; // General landscape
+        console.log('MatchMedia: Landscape');
+    } else if (window.matchMedia("(orientation: portrait)").matches) {
+        currentOrientation = 'portrait-primary'; // General portrait
+        console.log('MatchMedia: Portrait');
+    } else if (typeof window.orientation !== 'undefined') {
+        // Fallback to window.orientation (degrees)
+        console.log(`Window.orientation (degrees): ${window.orientation}`);
+        switch (window.orientation) {
+            case 0:
+            case 180: // Portrait or upside-down portrait
+                currentOrientation = 'portrait-primary';
+                break;
+            case 90:
+            case -90: // Landscape
+                currentOrientation = 'landscape-primary';
+                break;
+            default:
+                currentOrientation = 'unknown';
+        }
+    } else {
+        currentOrientation = 'unknown';
+        console.log('Could not determine orientation.');
+    }
+
+    // --- Your Game's Logic for Orientation ---
+    // Since you prefer "sensorPortrait" and want to enforce it,
+    // your primary goal here is to detect if it's NOT portrait.
+    if (currentOrientation.includes('landscape')) {
+        console.warn("Device is in Landscape. Game designed for Portrait.");
+        if (rotateMessageOverlay) {
+            rotateMessageOverlay.innerHTML = "<p>This experience is best in Portrait mode. Please rotate your device.</p>";
+            rotateMessageOverlay.style.display = 'flex';
+        }
+        // Consider implicitly pausing game logic if it's truly unplayable or graphics break
+        // if (!gamePaused) { // Assuming 'gamePaused' is your global pause flag
+        //    setPauseState(true, 'orientation'); // Pass a reason if your pause system supports it
+        // }
+    } else if (currentOrientation.includes('portrait')) {
+        console.log("Device is in Portrait. Correct orientation for the game.");
+        if (rotateMessageOverlay) {
+            rotateMessageOverlay.style.display = 'none';
+        }
+        // If you implicitly paused due to orientation, you might resume here,
+        // but be careful not to override a user's explicit pause.
+        // if (wasPausedByOrientation && gamePaused) {
+        //    setPauseState(false, 'orientation');
+        // }
+    } else {
+        console.log("Orientation is unknown or not strictly portrait/landscape.");
+        // Decide how to handle this case, maybe hide the message.
+        if (rotateMessageOverlay) {
+            rotateMessageOverlay.style.display = 'none';
+        }
+    }
+}
+
+/**
+ * Initializes orientation detection listeners.
+ */
+function initOrientationDetection() {
+    console.log("Initializing JavaScript orientation detection...");
+
+    // 1. Modern approach: screen.orientation API
+    if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+        screen.orientation.addEventListener('change', () => {
+            console.log("Event: screen.orientation 'change'");
+            handleOrientationChange();
+        });
+        console.log("Attached listener to screen.orientation 'change'.");
+    } else {
+        // 2. Fallback: matchMedia for orientation
+        const landscapeMatcher = window.matchMedia("(orientation: landscape)");
+        if (typeof landscapeMatcher.addEventListener === 'function') {
+            landscapeMatcher.addEventListener('change', (e) => {
+                console.log(`Event: matchMedia '(orientation: landscape)' changed. Matches: ${e.matches}`);
+                handleOrientationChange();
+            });
+            console.log("Attached listener to matchMedia '(orientation: landscape)'.");
+            // Note: You might also want to listen to "(orientation: portrait)" changes
+            // if the landscape one doesn't fire reliably on all transitions back to portrait.
+            // However, usually one is sufficient as handleOrientationChange checks both.
+        } else if (typeof window.addEventListener === 'function') {
+            // 3. Older fallback: 'orientationchange' event on window
+            window.addEventListener('orientationchange', () => {
+                console.log("Event: window 'orientationchange'");
+                handleOrientationChange();
+            }, false);
+            console.log("Attached listener to window 'orientationchange'.");
+        } else {
+            console.warn("Could not attach any reliable orientation change listeners.");
+        }
+    }
+
+    // Perform an initial check when the script loads
+    console.log("Performing initial orientation check.");
+    handleOrientationChange();
+}
+document.addEventListener('DOMContentLoaded', () => {
 
 
             //load in pause ui
 
-            // Get references to your new UI elements
-            const pauseButton = document.getElementById('pauseButton');
-            const stopButton = document.getElementById('stopButton'); // Assuming you add this
-            const pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
-            const resumeButton = document.getElementById('resumeButton');
-            const liveGameArea = document.getElementById('gameArea'); // Re-fetch
+            // Get references to your new UI elements.. refetch them if needed
+
+            // most importantly liveGameArea = document.getElementById('gameArea'); // Re-fetch
+            welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
+            liveGameArea = document.getElementById('gameArea'); // Re-fetch the game area SVG element
+            quitToMenuButton = document.getElementById('quitToMenuButton'); // Assuming you have a quit button in the pause menu
+            controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element 
+            pauseButton = document.getElementById('pauseButton');
+            welcomeScreen = document.getElementById('welcomeScreenOverlay');
+            pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
+            resumeButton = document.getElementById('resumeButton');
+            
+            startButton = document.getElementById('startGameButton');
+
+            if (startButton) {
+                startButton.addEventListener('click', () => {
+                    if (animationFrameId) {
+                        console.log("Game is already running, cannot start again.");
+                    } else {
+                        console.log("Starting new game.");
+                        //initializeGame(); // Reset game state
+                        hideWelcomeScreen();
+                        showGameControls();
+                        hidePauseMenu(); // Hide pause menu if visible
+                        startGame(); // Start the game loop
+                    }
+                });
+            }
+
+
+
+
+
             // ... get other buttons from pause menu as needed ...
 
             // --- Event Listeners ---
@@ -1160,19 +1286,31 @@ const complexSvgString = `
                 });
             }
 
-            if (stopButton) {
-                stopButton.addEventListener('click', () => {
-                    if (!animationFrameId) {// Game is not running, start it
-                        startGame(); // Call the start function
-                        stopButton.textContent = 'Stop'; // Change button text to "Stop"
-                    } else {
+            if (quitToMenuButton) {
+
+
+
+
+                quitToMenuButton.addEventListener('click', () => {
+                    if(gamePaused === true){
+                        console.log("Quit to menu button clicked, stopping game.");
                         console.log("Stop button clicked, stopping game.");
                         stopGame(); // Call the stop function
-                        stopButton.textContent = 'Start'; // Change button text to "Start"
+                        hideGameControls();
+                        hidePauseMenu(); // Hide pause menu if visible
+                        showWelcomeScreen(); // Show welcome screen
+                        // Reset game state
                     }
 
                 });
+
+
+
+
             }
+
+
+
             // Option 2: Define the designed dimensions
             const NATIVE_SVG_WIDTH = 408; // The width your SVG was designed at
             const NATIVE_SVG_HEIGHT = 718; // The height your SVG was designed at
@@ -1183,5 +1321,6 @@ const complexSvgString = `
                     fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
                 });
             }
+            initOrientationDetection(); // Initialize orientation detection
 
         });

@@ -1,5 +1,6 @@
 package com.kapcode.ComposeBrowserTemplate
 import android.annotation.SuppressLint
+import android.content.pm.ApplicationInfo
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -20,6 +21,7 @@ import com.google.accompanist.web.AccompanistWebViewClient
 import com.google.accompanist.web.rememberWebViewState
 import android.os.Bundle
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,14 +37,23 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlin.math.abs
+import androidx.webkit.WebViewAssetLoader
+import com.google.accompanist.web.rememberWebViewNavigator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (0 != (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)) {
+            Log.d("MainActivityWebViewDebug", "Enabling WebView debugging.")
+            WebView.setWebContentsDebuggingEnabled(true)
+        } else {
+            Log.d("MainActivityWebViewDebug", "WebView debugging NOT enabled (release build).")
+        }
+
         setContent {
             LearnWithAiTheme { // Or your app's theme
                 // Here you would call your Composable
-                HtmlViewerWithBottomControls()
+                HtmlViewer()
             }
         }
     }
@@ -64,29 +75,40 @@ fun formatFileNameAsTitle(fileName: String): String {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun HtmlAssetView(
-    assetFileName: String,
-    webViewClient: AccompanistWebViewClient,
-    modifier: Modifier = Modifier // This modifier should have .weight(1f) from parent
+    assetFileName: String, // You might use this to dynamically set initialUrl
+    webViewClient: AccompanistWebViewClient, // <--- Already here, perfect!
+    modifier: Modifier = Modifier
 ) {
-    // Log.d("HtmlAssetView", "Composing with asset: $assetFileName, Modifier has weight? (Check manually)")
-    val assetUrl = "file:///android_asset/$assetFileName" // Check case sensitivity here again!
-    // Log.d("HtmlAssetView", "Asset URL: $assetUrl")
-    val webViewState = rememberWebViewState(url = assetUrl)
+    // Use assetFileName to construct the initialUrl
+    val initialUrl = "https://appassets.androidplatform.net/$assetFileName"
+    Log.d("HtmlViewer", "HtmlAssetView Initial WebView URL to: $initialUrl for file: $assetFileName")
 
-    // Add logging for WebViewClient callbacks if not already present
-    // (onPageStarted, onPageFinished, onReceivedError)
+    val webViewState = rememberWebViewState(url = initialUrl)
+    val navigator = rememberWebViewNavigator()
+
+    LaunchedEffect(initialUrl) { // Use assetFileName or initialUrl as key
+        if (webViewState.lastLoadedUrl != initialUrl || webViewState.content is com.google.accompanist.web.WebContent.NavigatorOnly) {
+            // The NavigatorOnly check helps if the webview was previously blank
+            Log.d("HtmlAssetView", "Loading URL: $initialUrl")
+            navigator.loadUrl(initialUrl)
+        } else {
+            Log.d("HtmlAssetView", "URL $initialUrl already loaded or in progress.")
+        }
+    }
 
     com.google.accompanist.web.WebView(
         state = webViewState,
-        modifier = modifier, // <<<<< CRUCIAL: Use the passed-in modifier
-        client = webViewClient,
-        onCreated = { webView ->
-             Log.d("HtmlAssetView", "WebView created for $assetFileName")
-            webView.settings.javaScriptEnabled = true
-            webView.settings.domStorageEnabled = true
+        navigator = navigator,
+        modifier = modifier.fillMaxSize(), // Apply the passed modifier
+        client = webViewClient, // <--- Use the passed webViewClient
+        onCreated = { webViewInstance ->
+            Log.d("WebViewSetup", "WebView instance created in HtmlAssetView. JS Enabled. DOM Storage Enabled.")
+            webViewInstance.settings.javaScriptEnabled = true
+            webViewInstance.settings.domStorageEnabled = true
         }
     )
 }
+
 
 
 // ... other imports
@@ -165,7 +187,7 @@ fun TopBarWithPagePicker(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HtmlViewerWithBottomControls() {
+fun HtmlViewerWithBottomControlsOLD() {
     val context = LocalContext.current
     val assetManager = context.assets
     val htmlFiles = remember {
@@ -181,7 +203,9 @@ fun HtmlViewerWithBottomControls() {
 
     if (htmlFiles.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
             Text("No HTML lessons found in assets.", textAlign = TextAlign.Center)
@@ -190,6 +214,140 @@ fun HtmlViewerWithBottomControls() {
     }
 
     var currentFileIndex by rememberSaveable { mutableStateOf(0) }
+
+
+    // --- WebViewAssetLoader Setup ---
+    val assetLoader = remember {
+        androidx.webkit.WebViewAssetLoader.Builder()
+            .setDomain("appassets.androidplatform.net") /*
+ Crucial: Set a domain
+ Path handler for your /assets/ folder
+ The first parameter in addPathHandler is the virtual path segment in your special domain URL
+ The second parameter is how to find those files locally.
+ */
+            .addPathHandler("/", androidx.webkit.WebViewAssetLoader.AssetsPathHandler(context))
+            .addPathHandler("/assets/", androidx.webkit.WebViewAssetLoader.AssetsPathHandler(context))
+            // You can add more handlers if you have assets in res/raw, for example:
+            // .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(context))
+            .build()
+    }
+
+
+
+
+
+    // --- Custom WebView Client using the AssetLoader ---
+    val customWebViewClient = remember(assetLoader, htmlFiles) { // Recreate if assetLoader or htmlFiles change
+        object : AccompanistWebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView?, // Nullable as per Accompanist
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                // Let the assetLoader try to handle the request if the URL matches its domain
+                return if (view != null && request?.url != null) {
+                    // Log.d("WebViewClientDebug", "Intercepting: ${request.url}")
+                    assetLoader.shouldInterceptRequest(request.url) // Pass the full URI
+                } else {
+                    // Log.d("WebViewClientDebug", "Not intercepting, view or request or URL is null")
+                    super.shouldInterceptRequest(view, request)
+                }
+            }
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                val urlString = request?.url?.toString()
+                Log.d("WebViewClientDebug", "shouldOverrideUrlLoading: $urlString")
+
+                if (urlString != null) {
+                    // If it's an appassets URL, let the WebView load it (it will be intercepted by shouldInterceptRequest)
+                    if (request.url.host == "appassets.androidplatform.net") {
+                        Log.d("WebViewClientDebug", "Letting WebView handle appassets URL: $urlString")
+                        return false // false means WebView handles it
+                    }
+
+                    // Your existing logic for handling internal file:///android_asset/ links (if any remain, or for other schemes)
+                    // This part might become less relevant if all internal navigation uses the assetLoader's domain.
+                    if (urlString.startsWith("file:///android_asset/")) {
+                        val clickedFileName = urlString.substringAfterLast('/')
+                            .substringBefore("?")
+                            .substringBefore("#")
+                        val newIndex = htmlFiles.indexOf(clickedFileName)
+                        if (newIndex != -1) {
+                            Log.d("WebViewLinkClick", "Handled internal asset link: $clickedFileName")
+                            // currentFileIndex = newIndex // Make sure this state update causes recomposition
+                            return true // true because we've handled it
+                        }
+                    }
+                    // Handle other external links (http, https, mailto, etc.)
+                    // Example: Open in external browser - this needs more robust handling
+                    // if (!urlString.startsWith("http:") && !urlString.startsWith("https:")) { ... }
+                }
+                Log.d("WebViewClientDebug", "Super will handle or block: $urlString")
+                return super.shouldOverrideUrlLoading(view, request) // Default handling
+            }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                super.onPageFinished(view, url)
+                Log.d("WebViewClientDebug", "Page finished loading: $url")
+            }
+        }
+    }
+
+    // --- Determine initial URL ---
+    // Make sure htmlFiles is not empty and currentFileIndex is valid
+
+    val initialUrl = if (htmlFiles.isNotEmpty() && currentFileIndex in htmlFiles.indices) {
+        val fileName = htmlFiles[currentFileIndex]
+        // Construct the URL using the assetLoader's domain
+        // Ensure your HTML files are directly in 'assets' or specify the subfolder e.g., "/assets/lessons/$fileName"
+        "https://appassets.androidplatform.net/assets/$fileName"
+    } else {
+        "https://appassets.androidplatform.net/assets/error_page.html" // A fallback or empty page
+    }
+    Log.d("HtmlViewer", "Initial WebView URL: $initialUrl")
+
+    val webViewState = rememberWebViewState(url = initialUrl)
+    val navigator = rememberWebViewNavigator();
+    LaunchedEffect(initialUrl) { // Reload if initialUrl changes due to currentFileIndex
+        if (webViewState.lastLoadedUrl != initialUrl) {
+            navigator.loadUrl(initialUrl)
+        }
+    }
+
+
+    // --- Your Scaffold and Column structure ---
+    // Scaffold(...) { innerPadding ->
+    //  Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+
+    if (htmlFiles.isNotEmpty() && currentFileIndex in htmlFiles.indices) {
+        // Log.d("HtmlViewerLayout", "Displaying HtmlAssetView for ${htmlFiles[currentFileIndex]}")
+        key(initialUrl) { // Keying with initialUrl ensures WebView reloads if URL changes
+            com.google.accompanist.web.WebView(
+                state = webViewState,
+                modifier = Modifier.fillMaxWidth(), // Example modifier
+                client = customWebViewClient, // Your client with assetLoader logic
+                // captureBackPresses = true, // If you want WebView to handle back for its history
+                onCreated = { webViewInstance ->
+                    Log.d("WebViewSetup", "WebView instance created. JS Enabled. DOM Storage Enabled.")
+                    webViewInstance.settings.javaScriptEnabled = true
+                    webViewInstance.settings.domStorageEnabled = true
+                    // IMPORTANT for local development with `file:///` if not using assetLoader for everything
+                    // OR if loading mixed content, though appassets.androidplatform.net is https
+                    // webViewInstance.settings.allowFileAccess = true
+                    // webViewInstance.settings.allowContentAccess = true
+                    // For JS modules from file:/// (less effective than WebViewAssetLoader for modules):
+                    // webViewInstance.settings.allowFileAccessFromFileURLs = true
+                    // webViewInstance.settings.allowUniversalAccessFromFileURLs = true
+                }
+            )
+        }
+    } else {
+        // Fallback content if no HTML files or index out of bounds
+        // Text("No HTML content available or index out of bounds.")
+    }
+
     LaunchedEffect(htmlFiles) {
         if (currentFileIndex !in htmlFiles.indices && htmlFiles.isNotEmpty()) {
             currentFileIndex = 0
@@ -199,80 +357,6 @@ fun HtmlViewerWithBottomControls() {
     val pageTitles = remember(htmlFiles) {
         htmlFiles.map { fileName -> formatFileNameAsTitle(fileName) }
     }
-
-
-
-    // --- VV KEY CHANGES START HERE VV ---
-
-    val customWebViewClient = remember(htmlFiles, currentFileIndex) { // Re-create if htmlFiles changes
-        object : AccompanistWebViewClient() { // Or android.webkit.WebViewClient
-            override fun shouldOverrideUrlLoading(
-                view: WebView?,
-                request: WebResourceRequest?
-            ): Boolean {
-                val url = request?.url?.toString()
-                Log.d("WebViewLinkClick", "Attempting to load URL: $url")
-
-                if (url != null && url.startsWith("file:///android_asset/")) {
-                    val clickedFileName = url.substringAfterLast('/')
-                        .substringBefore("?") // Remove query parameters if any
-                        .substringBefore("#")  // Remove fragment identifiers if any
-
-                    val newIndex = htmlFiles.indexOf(clickedFileName)
-
-                    if (newIndex != -1) {
-                        Log.d("WebViewLinkClick", "Local asset: $clickedFileName found at index $newIndex")
-                        if (currentFileIndex != newIndex) {
-                            currentFileIndex = newIndex // << THE CRUCIAL STATE UPDATE
-                        }
-                        // Important: Return true to indicate you've handled the URL.
-                        // The recomposition due to currentFileIndex changing will cause
-                        // HtmlAssetView (thanks to its `key`) to load the new page.
-                        return true
-                    } else {
-                        Log.w("WebViewLinkClick", "Local asset $clickedFileName not in known htmlFiles list.")
-                        // If it's an asset but not in your managed list, you might decide
-                        // to load it anyway, but currentFileIndex won't track it.
-                        // For this use case, we probably want to return false or true
-                        // without changing index if it's not part of the managed lessons.
-                        // Returning false here would let WebView try, but it might navigate away
-                        // from your managed flow.
-                        return false // Or true if you want to block navigation to unmanaged local files
-                    }
-                }
-                Log.d("WebViewLinkClick", "Not a recognized local asset link, letting WebView proceed (e.g., http link).")
-                // Let the WebView handle other URLs (e.g., http, https, or mailto links)
-                return false
-            }
-
-            // Optional: Deprecated version for compatibility if not relying solely on Accompanist's base
-            @Deprecated("Use shouldOverrideUrlLoading(WebView, WebResourceRequest)", ReplaceWith("false"))
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                if (url != null && url.startsWith("file:///android_asset/")) {
-                    val clickedFileName = url.substringAfterLast('/')
-                        .substringBefore("?")
-                        .substringBefore("#")
-                    val newIndex = htmlFiles.indexOf(clickedFileName)
-                    if (newIndex != -1) {
-                        if (currentFileIndex != newIndex) {
-                            currentFileIndex = newIndex
-                        }
-                        return true
-                    }
-                }
-                return false
-            }
-
-            override fun onPageFinished(view: WebView, url: String?) {
-                super.onPageFinished(view, url)
-                Log.d("HtmlAssetView", "Page finished loading in WebView: $url")
-                // You could also try to get the title from view.title here if needed for other purposes
-            }
-        }
-    }
-
-
-
 
     val canGoPrevious = currentFileIndex > 0
 
@@ -349,7 +433,8 @@ fun HtmlViewerWithBottomControls() {
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f))
                         .padding(horizontal = 8.dp)
                         .pointerInput(Unit) { // HORIZONTAL SWIPE FOR PAGE TURNING
-                            var accumulatedDragX = 0f // Make sure this is correctly scoped if not already
+                            var accumulatedDragX =
+                                0f // Make sure this is correctly scoped if not already
                             val velocityTracker = VelocityTracker() // And this
 
                             // It's good practice to ensure this coroutineScope is properly managed,
@@ -368,11 +453,17 @@ fun HtmlViewerWithBottomControls() {
                                         change.consume()
                                         accumulatedDragX += dragAmount
                                         velocityTracker.addPointerInputChange(change)
-                                        Log.d("SwipeDebug", "Column Dragging: $accumulatedDragX, changeId: ${change.id}")
+                                        Log.d(
+                                            "SwipeDebug",
+                                            "Column Dragging: $accumulatedDragX, changeId: ${change.id}"
+                                        )
                                     },
                                     onDragEnd = {
                                         val velocity = velocityTracker.calculateVelocity().x
-                                        Log.d("SwipeDebug", "Column DragEnd: accumulatedDragX=$accumulatedDragX, velocity=$velocity")
+                                        Log.d(
+                                            "SwipeDebug",
+                                            "Column DragEnd: accumulatedDragX=$accumulatedDragX, velocity=$velocity"
+                                        )
 
                                         // Check your thresholds
                                         val absAccumulatedDragX = abs(accumulatedDragX)
@@ -382,20 +473,35 @@ fun HtmlViewerWithBottomControls() {
                                             if (accumulatedDragX < 0 /* Swipe Left */) { // Simplified condition for clarity
                                                 if (canGoNext) {
                                                     currentFileIndex++
-                                                    Log.d("SwipeDebug", "Swiped Left to Next (Index: $currentFileIndex)")
+                                                    Log.d(
+                                                        "SwipeDebug",
+                                                        "Swiped Left to Next (Index: $currentFileIndex)"
+                                                    )
                                                 } else {
-                                                    Log.d("SwipeDebug", "Swipe Left: Cannot go next.")
+                                                    Log.d(
+                                                        "SwipeDebug",
+                                                        "Swipe Left: Cannot go next."
+                                                    )
                                                 }
                                             } else if (accumulatedDragX > 0 /* Swipe Right */) { // Simplified condition
                                                 if (currentFileIndex > 0) {// Simplified condition fixed odd bug caused by canGoPrevious Quirk
                                                     currentFileIndex--
-                                                    Log.d("SwipeDebug", "Swiped Right to Previous (Index: $currentFileIndex)")
+                                                    Log.d(
+                                                        "SwipeDebug",
+                                                        "Swiped Right to Previous (Index: $currentFileIndex)"
+                                                    )
                                                 } else {
-                                                    Log.d("SwipeDebug", "Swipe Right: Cannot go previous.")
+                                                    Log.d(
+                                                        "SwipeDebug",
+                                                        "Swipe Right: Cannot go previous."
+                                                    )
                                                 }
                                             }
                                         } else {
-                                            Log.d("SwipeDebug", "Column DragEnd: Swipe below threshold.")
+                                            Log.d(
+                                                "SwipeDebug",
+                                                "Column DragEnd: Swipe below threshold."
+                                            )
                                         }
                                         accumulatedDragX = 0f // Reset
                                     },
@@ -444,5 +550,108 @@ fun HtmlViewerWithBottomControls() {
     }
 }
 
+
+
+
+
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HtmlViewer() {
+    val context = LocalContext.current
+    // ... (get htmlFiles, currentFileIndex state, etc. as before) ...
+    val htmlFiles = remember {
+        try {
+            // Get all files from the root of the assets directory
+            val allAssetFiles = context.assets.list("") ?: emptyArray()
+
+            // Filter for .html files and map to their names
+            val htmlFileNames = allAssetFiles
+                .filter { it.endsWith(".html", ignoreCase = true) }
+                .sorted() // Optional: sort them alphabetically or by a custom logic
+                .toList() // Convert Array<String> to List<String>
+
+            Log.d("HtmlFiles", "Found HTML files: $htmlFileNames")
+            htmlFileNames
+        } catch (e: IOException) {
+            Log.e("HtmlFiles", "Error listing assets", e)
+            emptyList<String>() // Return an empty list in case of error
+        }
+    }
+    var currentFileIndex by rememberSaveable { mutableStateOf(0) }
+
+    // --- WebViewAssetLoader Setup (Stays in the parent) ---
+    val assetLoader = remember {
+        WebViewAssetLoader.Builder()
+            .setDomain("appassets.androidplatform.net")
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(context))
+            .build()
+    }
+
+    // --- Custom WebView Client using the AssetLoader (Stays in the parent) ---
+    val customWebViewClient = remember(assetLoader) { // Recreate if assetLoader changes
+        object : AccompanistWebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): WebResourceResponse? {
+                // ... your interception logic ...
+                return if (view != null && request?.url != null &&
+                    request.url.scheme == "https" &&
+                    request.url.host == "appassets.androidplatform.net") {
+                    Log.d("WebViewIntercept", "AssetLoader handling: ${request.url}")
+                    assetLoader.shouldInterceptRequest(request.url)
+                } else {
+                    Log.d("WebViewIntercept", "Super handling: ${request?.url}")
+                    super.shouldInterceptRequest(view, request)
+                }
+            }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                super.onPageFinished(view, url)
+                Log.d("WebViewLoading", "Page finished in custom client: $url")
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url
+                if (url != null && url.host == "appassets.androidplatform.net") {
+                    return false // Let WebView handle (which means shouldInterceptRequest will get it)
+                }
+                // Consider opening external links in a browser
+                // try {
+                //     val intent = Intent(Intent.ACTION_VIEW, url)
+                //     context.startActivity(intent)
+                //     return true // We've handled it
+                // } catch (e: Exception) {
+                //     Log.e("WebViewOverride", "Could not open external link $url", e)
+                //     return true // Block if it can't be opened
+                // }
+                return super.shouldOverrideUrlLoading(view, request) // Default behavior
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = { /* ... Your TopAppBar ... */ },
+        bottomBar = { /* ... Your BottomAppBar for navigation ... */ }
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
+            if (htmlFiles.isNotEmpty() && currentFileIndex in htmlFiles.indices) {
+                val currentFileName = htmlFiles[currentFileIndex]
+                HtmlAssetView(
+                    assetFileName = currentFileName,
+                    webViewClient = customWebViewClient, // <--- PASS IT HERE
+                    modifier = Modifier.weight(1f) // Ensure HtmlAssetView fills available space
+                )
+            } else {
+                // Handle case where there are no files or index is out of bounds
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    Text("No HTML file selected or available.")
+                }
+            }
+        }
+    }
+}
 
 
