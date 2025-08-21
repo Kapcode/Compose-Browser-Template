@@ -531,10 +531,11 @@ body {
 </head>
 
 <body>
+
     <div class="game-wrapper">
         <div class="game-aspect-ratio-box">
             <!-- aspect ratio is that of a mobile screen 720 1280, scaled down-->
-            <svg id="gameArea" viewBox="0 0 404 718" preserveAspectRatio="xMidYMid meet">
+            <svg id="gameArea" viewBox="0 0 404 718" preserveAspectRatio="xMidYMid meet" >
                 <defs>
 
                     <!-- new background defs -->
@@ -567,6 +568,7 @@ body {
 
 
             </svg>
+            <canvas id="gameCanvas" style="display: block;"></canvas> <
         </div>
           <!-- Pause/Stop Button Overlay (directly inside game-wrapper) -->
         <div id="gameControlsOverlay" class="game-controls-overlay">

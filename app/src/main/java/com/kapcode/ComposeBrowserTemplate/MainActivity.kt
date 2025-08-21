@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
             }
 
             // 3. Create the VibrationEffect and Vibrate
-            // The VibrationEffect API was added in Android Oreo (API 26)
+            // The VibrationEffect API was added in Android Oreo (API 26)--*/kvm-ok
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 // The second argument to createWaveform is the repeat index:
                 // -1 means do not repeat. 0 means repeat from the beginning of the pattern.

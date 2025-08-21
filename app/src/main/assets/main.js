@@ -2,16 +2,18 @@ import { simplePickleSvgString } from './constants.js';
 import { setVolume,playPooledSound } from './audioManagment.js';
 import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagment.js';
 
+/*
 const svgNS = "http://www.w3.org/2000/svg";
-        let simpleGroup = `<g id="simplegroup"> 
+        let simpleGroup = `<g id="simplegroup">
             <rect id="background" width="380" height="60" rx="5" ry="5" fill="lightblue" stroke="blue"/>
             <text id="text" x="5" y="5" font-family="Verdana" font-size="24" fill="purple">DEFAULT_TEXT</text>
         </g>`;
         let newcomplextext = '  <text\n    id=\"__TEXTID__\"\n    x=\"50\"\n    y=\"25\"\n    font-family=\"Verdana\"\n    font-weight=\"bold\"\n    font-size=\"6\" \n    fill=\"black\"\n    text-anchor=\"middle\"\n    dominant-baseline=\"middle\"\n    lengthAdjust=\"spacingAndGlyphs\"\n    text-rendering=\"optimizeLegibility\"\n    textLength=\"90\">I need help on problem one, replace the values please, and explain, I\'m confused. (Supply problem 1)</text>';
+*/
 
         // --- IMPORTANT: Get dimensions from viewBox ---
-        let gameAreaViewBoxWidth = 404; // Default if viewBox not readable
-        let gameAreaViewBoxHeight = 718; // Default
+        //let gameAreaViewBoxWidth = 404; // Default if viewBox not readable
+        //let gameAreaViewBoxHeight = 718; // Default
         let gamePaused = false;
         let gameStopped = true; // New flag to track if the game is fully stopped
         let timeWhenPauseActuallyStarted = 0;
@@ -22,8 +24,8 @@ const svgNS = "http://www.w3.org/2000/svg";
 
         // --- Game Area Dimensions ---
         let headingHeight = 0;
-        const gameArea = document.getElementById('gameArea');
-        let liveGameArea = gameArea; // Use this for dynamic updates
+/*        const gameArea = document.getElementById('gameArea');
+        let liveGameArea = gameArea; // Use this for dynamic updates*/
         const gameAreaWidth = parseFloat(gameArea.getAttribute('width'));
         const gameAreaHeight = parseFloat(gameArea.getAttribute('height'));
         const scale = 4; // Scale factor for the game elements
@@ -32,14 +34,18 @@ const svgNS = "http://www.w3.org/2000/svg";
 
         const scoreDisplayUse = document.getElementById('scoreDisplay');
         const scoresplatUse = document.getElementById('scoresplat');
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
         // --- Word List ---
- const wordListPos = [
+ /*const wordListPos = [
     "How would I change this tire?",
     "Are cherries good for you?, I heard they have poison in them.",
     "Are bananas good for you?",
-    "What is inside a cherry?", 
-    "Is this sentence a good starter for my report on cats? ___", 
-    "How far away is the Moon from Earth?", 
+    "What is inside a cherry?",
+    "Is this sentence a good starter for my report on cats? ___",
+    "How far away is the Moon from Earth?",
     "What's the difference between concrete and cement?",
     "What’s dangerous about cherries?",
     "Can you tell me about the Arctic Circle, are there volcanoes there?",
@@ -55,14 +61,14 @@ const svgNS = "http://www.w3.org/2000/svg";
 
 
         const wordListNeg = ["I ate a cherry, when am I going to die?",
-            "I have sunburn, when am I getting cancer?", 
-            "Eating dirt is good for you, tell me why.", 
+            "I have sunburn, when am I getting cancer?",
+            "Eating dirt is good for you, tell me why.",
             "This is my homework... i have 5 mins left to do it, plz help.", "I have a test tomorrow, I need to pass, help me.",
             "I need to write a report on cats, what should I say?",
             "Volcanoes are in the arctic circle, tell me about that.",
             "I know Donny won the race (~he lost by a ton~) Give me the proof!",
         "This is my homework, what are the answers? (Supply Entire Page)",
-    ];
+    ];*/
 
 
 
@@ -79,7 +85,7 @@ const svgNS = "http://www.w3.org/2000/svg";
 
 
 
-        
+
         let gameTimeAccumulator = 0;
         // These constants should also be in a scope accessible by the handlers
         const MIN_SWIPE_DISTANCE_X = 50;      // Minimum horizontal distance to qualify as a swipe
@@ -110,7 +116,7 @@ const svgNS = "http://www.w3.org/2000/svg";
         // ---------------------------------------------
 
         function handleDocumentPointerMove(event) {
-            
+
         }
         function resetSwipeState() {
             // Reset the swipe state to initial values
@@ -135,7 +141,7 @@ const svgNS = "http://www.w3.org/2000/svg";
 
 
 
-        
+
         // --- Swipe Handling Functions ---
         function removeSwipedElementFromScreen(elementId) {
             const element = document.getElementById(elementId);
@@ -158,7 +164,7 @@ const svgNS = "http://www.w3.org/2000/svg";
 
         // --- Game Initialization ---
 
-        if (gameArea.viewBox && gameArea.viewBox.baseVal) {
+       /* if (gameArea.viewBox && gameArea.viewBox.baseVal) {
             const viewBox = gameArea.viewBox.baseVal;
             gameAreaViewBoxWidth = viewBox.width;
             gameAreaViewBoxHeight = viewBox.height;
@@ -168,7 +174,18 @@ const svgNS = "http://www.w3.org/2000/svg";
             // Fallback if viewBox attribute is missing, though it shouldn't be with the HTML changes
             gameAreaViewBoxWidth = parseFloat(gameArea.getAttribute('width')) || 404;
             gameAreaViewBoxHeight = parseFloat(gameArea.getAttribute('height')) || 718;
-        }
+        }*/
+
+        // Ensure canvas dimensions are set in HTML or via CSS.
+        // For this example, we'll set them directly in JS,
+        // but you might want to get them from the canvas element's attributes
+        // if they are set in HTML (e.g., canvas.width = canvas.getAttribute('width');)
+        canvas.width = 404; // Default width, same as your old SVG viewBox
+        canvas.height = 718; // Default height, same as your old SVG viewBox
+
+        let gameAreaViewBoxWidth = canvas.width;
+        let gameAreaViewBoxHeight = canvas.height;
+        let liveGameArea = canvas; // Now, liveGameArea refers to the canvas
 
         let currentWordIndex = 0;
 
@@ -220,7 +237,7 @@ const svgNS = "http://www.w3.org/2000/svg";
             return svgDoc.documentElement.firstChild; // This is the element defined in your string (e.g., the <g> or <text>)
         }
 
-        // Template for the text element. Using placeholders like __TEXT_ID__ 
+        // Template for the text element. Using placeholders like __TEXT_ID__
         let ellipseElementTemplate = '<ellipse id="__ELLIPSE_ID__" cx="50.106" cy="24.933" fill="url(#c)" stroke="url(#d)" stroke-width=".472" rx="49.658" ry="24.83"/>';
         let ellipseElementTemplate1 = '<ellipse id="__ELLIPSE_ID__" cx="50.106" cy="24.933" fill="red" stroke="black" stroke-width=".472" rx="49.658" ry="24.83"/>';
         let textElementTemplate = `<text
@@ -307,8 +324,8 @@ const svgNS = "http://www.w3.org/2000/svg";
         console.log(`Speed: ${fastWordSpeed} px/s, Desired Spacing: ${desiredPixelSpacing} px`);
         console.log(`Calculated Spawn Interval for fast speed: ${fastSpawnInterval} ms`); // Should be very short
 
-        // --- Function to create a full group instance with text and ellipse ---  
-        
+        // --- Function to create a full group instance with text and ellipse ---
+
 
 let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the complex SVG, false for simple group
 
@@ -626,7 +643,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
                 // Deactivate visual cue for this pause if you had one.
                 //TODO unimplicitpause here instead of elsewere
                 if( gamePaused === false ) {
-                    console.log("Unpausing game after score splat animation."); 
+                    console.log("Unpausing game after score splat animation.");
                     setPauseState(false); // Unpause the game after splat animation
 
                 }
@@ -637,54 +654,9 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
 
 
-
-
-        // --- Game Element Creation ---
-        // --- Game Element Creation ---
-        // --- Game Element Creation (MODIFIED) ---
-
-        function createFallingWordBox() {
-            if (activeGameElements.length >= MAX_ONSCREEN_ELEMENTS) {
-                return;
-            }
-
-
-
-            // Calculate initial position
-            const scaledWidth = baseGroupWidth * scale;  // 100 * 3.2 = 320 units wide when scaled
-
-            const initialX = (gameAreaViewBoxWidth / 2) - (scaledWidth / 2);  // Centers the scaled element
-            const scaledHeight = baseGroupHeight * scale; // 50 * 3.2 = 160 units tall when scaled
-            // Initial Y position is above the visible area
-            const initialY = 0 - scaledHeight;
-
-            // Create instance with position information
-            instance1 = createInstanceFromSVGString( svg, false,false,"");
-            instance1.setAttribute('transform', `translate(${initialX}, ${initialY})`);
-
-            instance1.setAttribute('transform', `translate(${initialX}, ${initialY}) scale(${scale})`);
-
-            instance1.setAttribute('data-word', word); // Store the word in a data attribute
-
-
-            // Store in activeGameElements with necessary properties
-            activeGameElements.push({
-                element: instance1,
-                currentY: initialY,
-                currentX: initialX,
-                speed: wordSpeed,// Speed at which the word box falls
-                word: word,
-                height: baseGroupHeight
-            });
-            //commented out click listener, now i use swiping like a boss
-            //instance1.addEventListener('click', handleWordBoxClick); // Attach click handler
-        }
-        // --- Click Handler for Word Boxes ---
-
-        // --- Game Loop Functions ---
         // ... (updateElementPositions and gameLoop remain largely the same) ...
         function updateElementPositions(deltaTime) {
-          
+
         }
 
 
@@ -693,6 +665,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         // 0.01666666667 // 16.67ms, roughly 60 FPS
 
         function gameLoop(currentTimestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (!liveGameArea) {
                 liveGameArea = document.getElementById('gameArea');
                 if (!liveGameArea) {
@@ -769,7 +742,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
                     // }
 
                     //updateElementPositions(MAX_DELTA_TIME); // Pass the FIXED time step
-                    //updateScoreDisplay(); // Update score display based on current game state//puts the game scroe display back on the top of the screen
+                    ////updateScoreDisplay(); // Update score display based on current game state//puts the game scroe display back on the top of the screen
                     // otherFixedStepLogic(MAX_DELTA_TIME);
                 } else {
                     // Interaction pause or splat animation: Fixed-step logic is also paused.
@@ -787,34 +760,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
 
         let pickleSpawned =false;
         function gameLogic(liveGameArea) {
-            if(pickleSpawned === false){
-                console.log("Spawning pickle for the first time.");
-                            // Assuming createInstanceFromSVGString, liveGameArea, etc., are defined
-            // and your swipe handling logic is in place (handleDocumentPointerMove, etc.)
 
-                const newComplexAsset = createInstanceFromSVGString(
-                    pickel_svgStringValue,      // The SVG content itself
-                    true,                  // Add swipe listeners
-                    true,                  // Assign a unique ID to the root <g>
-                    'myGameAsset_'         // Prefix for the unique ID
-                );
-
-                if (newComplexAsset) {
-                    liveGameArea.appendChild(newComplexAsset); // Append to the live game area
-                    console.log("Successfully parsed and appended complex SVG asset:", newComplexAsset.id);
-                    transformSVGElement(newComplexAsset, 100, 100, .2); // Example transform
-
-
-                    // You could now further manipulate newComplexAsset if needed, e.g.,
-                    // newComplexAsset.setAttribute('transform', 'translate(100, 100) scale(1.5)');
-                    // Or target specific children by their ID if you know them:
-                    // const label = newComplexAsset.querySelector('#assetLabel');
-                    // if (label) label.textContent = "NEW_STATUS";
-                } else {
-                    console.error("Failed to parse the complex SVG asset.");
-                }
-                    pickleSpawned = true; // Set flag to true to prevent multiple spawns
-                }
             // This is where you would put your game logic that needs to run every frame
             // For example, checking for collisions, updating scores, etc.
             // For now, let's just log the current score
@@ -824,6 +770,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
 
 
+/*
         function transformSVGElement(element, x, y, scaleFactor) {
     if (!element) {
         console.error("Element to transform is not defined.");
@@ -856,6 +803,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
     element.setAttribute('transform', transformString);
     console.log(`Applied transform: ${transformString} to element ID: ${element.id || 'N/A'}`);
 }
+*/
 
 
 
@@ -881,7 +829,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
 
 
 
-     
+
 
 // 4. Add cleanup on game stop
         function stopGame() {
@@ -898,16 +846,16 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             activeGameElements.forEach(elem => {
                 if (elem.element) {
                     //elem.element.removeEventListener('click', handleWordBoxClick);
-                    if (elem.element.parentNode) {
+/*                    if (elem.element.parentNode) {
                         elem.element.parentNode.removeChild(elem.element);
-                    }
+                    }*/
                     elem.element = null;
                 }
             });
 
             activeGameElements = [];
             lastTimestamp = 0;
-            
+
         }
 
         function pauseGame() {
@@ -940,7 +888,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             }
         }
 
-        function fitSvgToScreenWithPadding(svgElement, designedWidth, designedHeight, PADDING_TOP_BOTTOM = 5) {
+        /*function fitSvgToScreenWithPadding(svgElement, designedWidth, designedHeight, PADDING_TOP_BOTTOM = 5) {
             if (!svgElement) {
                 console.error("fitSvgToScreenWithPadding: svgElement is not defined!");
                 return;
@@ -1009,7 +957,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             // No direct CSS padding on svgElement needed here because we've
             // already sized it to leave space around it.
             // If you add CSS padding to svgElement, it will be *in addition* to this.
-        }
+        }*/
 
         // --- Example Usage ---
         // const liveGameArea = document.getElementById('gameArea'); // Your SVG element
@@ -1017,12 +965,12 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         const NATIVE_SVG_HEIGHT = 900;
         const PADDING_VALUE = 5; // 5px padding top and bottom
 
-        if (liveGameArea) {
+/*        if (liveGameArea) {
             fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
             window.addEventListener('resize', () => {
                 fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
             });
-        }
+        }*/
 
         // --- Control and Setup ---
         // ... (initializeGame, button event listeners remain the same) ...
@@ -1044,25 +992,12 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
                 startGame(); // Start the game loop
             }
         }
-        
+
         function initializeGame() {
             loadSettings(); // Load settings from localStorage
             loadProgress(); // Load progress from localStorage
-            updateScoreDisplay();
+            //updateScoreDisplay();
 
-            // Clean up existing elements
-            activeGameElements.forEach(elem => {
-                if (elem.element) {
-                    // Remove event listeners
-                    //elem.element.removeEventListener('click', handleWordBoxClick);
-                    // Remove from DOM if it exists
-                    if (elem.element.parentNode) {
-                        elem.element.parentNode.removeChild(elem.element);
-                    }
-                    // Clear reference
-                    elem.element = null;
-                }
-            });
 
             // Clear array
             activeGameElements = [];
@@ -1081,12 +1016,12 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
         function hideGameControls() {
             if (controlsOverlay) {
-                controlsOverlay.style.visibility = 'hidden'; // Hide controls overlay   
+                controlsOverlay.style.visibility = 'hidden'; // Hide controls overlay
 
                 controlsOverlay.style.display = 'none'; // Hide controls overlay
-            } else {    
+            } else {
                 console.error("Controls overlay not found.");
-            }   
+            }
         }
         function showWelcomeScreen(){
             if (welcomeScreen) {
@@ -1107,20 +1042,20 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             }
         }
         let welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
-        let controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element 
+        let controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element
         let pauseButton = document.getElementById('pauseButton');
         let welcomeScreen = document.getElementById('welcomeScreenOverlay');
         let pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
         let resumeButton = document.getElementById('resumeButton');
         let startButton = document.getElementById('startGameButton');
-        let quitToMenuButton = document.getElementById('quitToMenuButton'); //  
+        let quitToMenuButton = document.getElementById('quitToMenuButton'); //
         let settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
         let settingsOverlay = document.getElementById('settingsOverlay');
         let closeSettingsButton = document.getElementById('closeSettingsButton')
         // Initial Setup
-        updateScoreDisplay();
+        //updateScoreDisplay();
 
-        
+
 // Get references to any UI elements you might use for messages
 const rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
 
@@ -1234,10 +1169,6 @@ function initOrientationDetection() {
     handleOrientationChange();
 }
 
-
-
-
-
 function showAndroidToast() {
     if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
         // We are likely in the Android WebView with the bridge
@@ -1265,15 +1196,6 @@ function vibrateDevicePattern() {
     }
 }
 
-
-
-
-
-
-
-
-
-
 //// --- DOMContentLoaded Event Listener ---
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1287,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
             liveGameArea = document.getElementById('gameArea'); // Re-fetch the game area SVG element
             quitToMenuButton = document.getElementById('quitToMenuButton'); // Assuming you have a quit button in the pause menu
-            controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element 
+            controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element
             pauseButton = document.getElementById('pauseButton');
             welcomeScreen = document.getElementById('welcomeScreenOverlay');
             pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
@@ -1295,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
             settingsOverlay = document.getElementById('settingsOverlay');
             closeSettingsButton = document.getElementById('closeSettingsButton')
-            
+
             startButton = document.getElementById('startGameButton');
 
             if (startButton) {
@@ -1312,11 +1234,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             }
-
-
-            
-
-
             // ... get other buttons from pause menu as needed ...
 
             // --- Event Listeners ---
@@ -1345,10 +1262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (quitToMenuButton) {
-
-
-
-
                 quitToMenuButton.addEventListener('click', () => {
 
                     if(gamePaused === true){
@@ -1360,26 +1273,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         showWelcomeScreen(); // Show welcome screen
                         // Reset game state
                     }
-
                 });
-
-
-
-
             }
-
-
-
             // Option 2: Define the designed dimensions
             const NATIVE_SVG_WIDTH = 408; // The width your SVG was designed at
             const NATIVE_SVG_HEIGHT = 718; // The height your SVG was designed at
             const PADDING_VALUE = 5; // 5px padding top and bottom
-            if (liveGameArea) { // Make sure liveGameArea (your SVG element) exists
+/*            if (liveGameArea) { // Make sure liveGameArea (your SVG element) exists
                 fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT), PADDING_VALUE;
                 window.addEventListener('resize', () => {
                     fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
                 });
-            }
+            }*/
 
 
 
@@ -1408,33 +1313,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             initOrientationDetection(); // Initialize orientation detection
             vibrateDevicePattern();
-
-
-
-
-
-
         });
 
 
