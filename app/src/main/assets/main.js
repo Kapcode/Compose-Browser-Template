@@ -35,7 +35,7 @@ const svgNS = "http://www.w3.org/2000/svg";
         const scoreDisplayUse = document.getElementById('scoreDisplay');
         const scoresplatUse = document.getElementById('scoresplat');
 
-        const canvas = document.getElementById('gameCanvas');
+        const canvas = document.getElementById('gameArea');
         const ctx = canvas.getContext('2d');
 
         // --- Word List ---
@@ -236,29 +236,6 @@ const svgNS = "http://www.w3.org/2000/svg";
             }
             return svgDoc.documentElement.firstChild; // This is the element defined in your string (e.g., the <g> or <text>)
         }
-
-        // Template for the text element. Using placeholders like __TEXT_ID__
-        let ellipseElementTemplate = '<ellipse id="__ELLIPSE_ID__" cx="50.106" cy="24.933" fill="url(#c)" stroke="url(#d)" stroke-width=".472" rx="49.658" ry="24.83"/>';
-        let ellipseElementTemplate1 = '<ellipse id="__ELLIPSE_ID__" cx="50.106" cy="24.933" fill="red" stroke="black" stroke-width=".472" rx="49.658" ry="24.83"/>';
-        let textElementTemplate = `<text
-    id="__TEXT_ID__"
-    x="50"
-    y="25"
-    font-family="Verdana"
-    font-weight="bold"
-    font-size="6"
-    fill="black"
-    text-anchor="middle"
-    dominant-baseline="middle"
-    lengthAdjust="spacingAndGlyphs"
-    text-rendering="optimizeLegibility"
-    textLength="90"
-  >__TEXT_CONTENT__</text>`;
-
-
-        // Placeholder for the text content itself
-        let defaultTextContent = "I need help on problem one, replace the values please, and explain, I'm confused. (Supply problem 1)";
-
         // Counter for unique IDs
         let instanceCounter = 0;
 
@@ -476,12 +453,6 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             lastSpawnTime = timeNow;
             // Ensure game is unpaused
             setPauseState(false);
-            // If you were tracking pause duration for visibility changes specifically:
-            // if (timeWhenPauseActuallyStarted > 0) {
-            //     const durationOfPause = (timeNow - timeWhenPauseActuallyStarted) / 1000;
-            //     console.log(`Tab was hidden/inactive for approx ${durationOfPause.toFixed(2)} seconds.`);
-            //     timeWhenPauseActuallyStarted = 0;
-            // }
         }
 
 
@@ -561,103 +532,45 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
 
         }
 
-        // --- Score Display and Splat Functions --- provides whitespace for the score display and splat messages
 
-        function showScoresplat(points, message) {
-            // Create splat element
-            const splat = document.createElement('div');
-            splat.className = 'score-splat';
-            splat.textContent = message + ` ${points > 0 ? '+' : ''}${points}`;
-            splat.style.color = 'green'; // Default color
-            splat.style.color = points > 0 ? 'green' : 'red'; // Color based on score
-            splat.style.position = 'absolute';
-            splat.style.zIndex = '1000'; // Ensure it appears above other content
-            if (message === "START!") {
-                splat.style.color = 'green'; // Default color
-                splat.textContent = "START!"; // Set the text content
-                splat.style.fontSize = '40px'; // Make it larger for emphasis
-                splat.style.fontWeight = 'bold'; // Make it bold for emphasis
+// --- Inside your main game loop's update logic (e.g., updateGameObjects(deltaTime)) ---
+// --- Inside your main game loop's update logic (e.g., updateGameObjects(deltaTime)) ---
+function updateGameElements(deltaTime, currentTime) { // deltaTime is in seconds, currentTime in ms
+    activeGameElements.forEach(element => {
+        // Movement logic (you likely already have this)
+        if (element.direction && element.speed) { // Check for speed too
+            element.x += element.direction.x * element.speed * deltaTime;
+            element.y += element.direction.y * element.speed * deltaTime;
+        }
+
+        // Animation logic for sprites
+        if (element.type === 'sprite' && element.animationName) { // Check for animationName
+            const animData = ANIMATIONS[element.animationName]; // Get current animation's general data (like speed, loop)
+            if (!animData) {
+                console.warn(`Missing animData for ${element.animationName} during update.`);
+                return; // Skip animation if data is missing
             }
 
-            // Set position to center of the game area
-            const liveGameArea = document.getElementById('gameArea');
-            if (!liveGameArea) {
-                console.error("liveGameArea is null, cannot position splat.");
-                return; // Exit if game area is not found
-            }
-            // Use the liveGameArea dimensions to position the splat
-            // Center the splat in the game area
-            // This assumes the game area is positioned relative to the viewport
+            if (!element.lastFrameTime) element.lastFrameTime = currentTime;
 
-            // If you want to position it relative to a click or center, you can adjust this
-            // For example, if you want it to appear at the center of the game area:
-            // Position relative to click or center
-            // Get the dimensions of the splat itself
-            const splatWidth = splat.offsetWidth;
-            const splatHeight = splat.offsetHeight;
-            // Center it in the game area
-            // Get the bounding rectangle of the game area
-
-            const rect = liveGameArea.getBoundingClientRect();
-            splat.style.left = `${rect.left + rect.width / 2}px`;
-            splat.style.top = `${rect.top + rect.height / 2}px`;
-            // Adjust for the size of the splat
-            // splat.style.transform = `translate(-50%, -50%)`; // Center it by offsetting half its width and height
-
-
-            // --- ANIMATION LOGIC ---
-            // If a splat is already animating, do not start a new one
-            if (isScoreSplatAnimating) {
-                console.warn("A score splat animation is already in progress. Skipping new splat.");
-                return; // Exit if a splat is already animating
-            }
-            isScoreSplatAnimating = true;
-            console.log("Score splat started, game logic paused for animation.");
-
-            document.body.appendChild(splat);
-            // Trigger animation
-            requestAnimationFrame(() => {
-                splat.classList.add('show');
-            });
-            // Remove after animation
-            setTimeout(() => {
-                splat.remove();
-            }, scoreSplatTimeoutSeconds * 1000);
-
-
-
-
-            const initialTransform = splat.style.transform || 'translate(-50%, -50%)'; // Ensure it has a base
-            const animation = splat.animate([
-                { opacity: 1, transform: `${initialTransform} scale(1)` },
-                { opacity: .8, transform: `${initialTransform} scale(1.5) translateY(-30px)` }
-            ], {
-                duration: scoreSplatTimeoutSeconds * 1000,
-                easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-            });
-
-            animation.onfinish = () => {
-                splat.remove();
-                isScoreSplatAnimating = false;
-                console.log("Score splat finished, game logic can resume (if not otherwise paused).");
-                // Deactivate visual cue for this pause if you had one.
-                //TODO unimplicitpause here instead of elsewere
-                if( gamePaused === false ) {
-                    console.log("Unpausing game after score splat animation.");
-                    setPauseState(false); // Unpause the game after splat animation
-
+            if (currentTime - element.lastFrameTime >= element.animationSpeed) { // Use element's specific speed
+                element.currentFrameInAnimation++; // Increment frame WITHIN the current animation
+                if (element.currentFrameInAnimation >= element.totalFramesInAnimation) { // Check against this animation's length
+                    if (element.loop) {
+                        element.currentFrameInAnimation = 0;
+                    } else {
+                        element.currentFrameInAnimation = element.totalFramesInAnimation - 1; // Stay on last frame
+                        // Optionally handle animation end here (e.g., for explosions)
+                        // if (animData.onEnd === 'remove') activeGameElements.splice(...)
+                    }
                 }
-
-
-            };
-
+                element.lastFrameTime = currentTime;
+            }
         }
+        // Boundary checks, etc.
+    });
+}
 
-
-        // ... (updateElementPositions and gameLoop remain largely the same) ...
-        function updateElementPositions(deltaTime) {
-
-        }
 
 
 
@@ -666,6 +579,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
 
         function gameLoop(currentTimestamp) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             if (!liveGameArea) {
                 liveGameArea = document.getElementById('gameArea');
                 if (!liveGameArea) {
@@ -723,35 +637,22 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
                 // Only run game logic if not paused by interaction/splat
                 if (!gamePaused && !isScoreSplatAnimating) {
                     // --- Your Game Logic Updates using MAX_DELTA_TIME ---
-
                     gameLogic(liveGameArea); // Call your game logic function here
+                    // --- Render Game ---
 
-                    // Spawning (using direct timestamp comparison, ensure lastSpawnTime is managed with pauses)
-                    // If game can pause for long, (currentTimestamp - lastSpawnTime) can be huge.
-                    // Consider resetting lastSpawnTime when unpausing, or use a delta-time accumulator for spawning.
-                   // if (currentTimestamp - lastSpawnTime > ELEMENT_SPAWN_INTERVAL) {
-                       // createFallingWordBox();
-                       // lastSpawnTime = currentTimestamp; // Reset spawn timer
-                    //}
+                    updateGameElements(MAX_DELTA_TIME,currentTimestamp); // Pass the FIXED time step
 
-                    // Alternative Spawning (delta-time based, more robust with fixed step)
-                    // timeSinceLastSpawnThisFixedStep += MAX_DELTA_TIME;
-                    // if (timeSinceLastSpawnThisFixedStep >= ELEMENT_SPAWN_INTERVAL_SECONDS) {
-                    // createFallingWordBox();
-                    // timeSinceLastSpawnThisFixedStep = 0;
-                    // }
-
-                    //updateElementPositions(MAX_DELTA_TIME); // Pass the FIXED time step
-                    ////updateScoreDisplay(); // Update score display based on current game state//puts the game scroe display back on the top of the screen
-                    // otherFixedStepLogic(MAX_DELTA_TIME);
                 } else {
-                    // Interaction pause or splat animation: Fixed-step logic is also paused.
                     // If there's any logic that should run *despite* these pauses but
                     // *during* a fixed step, it would go here. Usually, nothing does.
                 }
                 gameTimeAccumulator -= MAX_DELTA_TIME;
             }
-
+            if (!gamePaused) {
+                // Inside your gameLoop function
+                //console.log("About to call drawGameElements from gameLoop");
+                drawGameElements(ctx); // <-- ADD THIS LINE
+            }
             // --- Rendering (Happens every frame, uses current element states) ---
             // renderAllGameElements(); // (This would be where you draw things based on their updated positions)
 
@@ -759,73 +660,47 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
 
         let pickleSpawned =false;
-        function gameLogic(liveGameArea) {
+// Add a counter variable in a scope accessible by gameLogic
+// (e.g., globally or just before gameLogic if it's not already defined elsewhere for this purpose)
+let spawnCounter = 0;
+const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA_TIME is ~1/60s
 
-            // This is where you would put your game logic that needs to run every frame
-            // For example, checking for collisions, updating scores, etc.
-            // For now, let's just log the current score
-           // console.log(`Current score: ${score}`);
-            //updateElementPositions(MAX_DELTA_TIME); // Update positions of all active elements
-            //uppdateScoreDisplay(); // Update score display based on current game state
+    function gameLogic(liveGameArea) { // liveGameArea might be the canvas
+        // This is where you would put your game logic that needs to run every fixed step
+
+        spawnCounter++;
+        if (spawnCounter >= SPAWN_INTERVAL_FRAMES) {
+            spawnTestRectangle();
+            spawnCounter = 0; // Reset counter
         }
 
-
-/*
-        function transformSVGElement(element, x, y, scaleFactor) {
-    if (!element) {
-        console.error("Element to transform is not defined.");
-        return;
+        // The rest of your gameLogic (which is currently empty or commented out)
+        // e.g., pickle spawning logic was here, which is commented out.
+        // console.log(`Current score: ${score}`);
     }
 
-    let scaleX, scaleY;
-    if (typeof scaleFactor === 'object' && scaleFactor !== null && 'sx' in scaleFactor && 'sy' in scaleFactor) {
-        scaleX = scaleFactor.sx;
-        scaleY = scaleFactor.sy;
-    } else if (typeof scaleFactor === 'number') {
-        scaleX = scaleFactor;
-        scaleY = scaleFactor;
-    } else {
-        console.warn("Invalid scaleFactor. Using scale(1,1). Provide a number or {sx, sy} object.");
-        scaleX = 1;
-        scaleY = 1;
-    }
-
-    // Order matters: typically scale then translate, or translate then scale affects the pivot point.
-    // If you want to scale around the element's local origin (0,0) and then move it:
-    const transformString = `translate(${x}, ${y}) scale(${scaleX}, ${scaleY})`;
-
-    // If you want to move the element's origin and then scale it around that new origin point
-    // (which means the x,y in translate are also scaled if scale comes first):
-    // const transformString = `scale(${scaleX}, ${scaleY}) translate(${x}, ${y})`;
-    // For most "place object at x,y and set its size" scenarios, `translate` then `scale` around its local origin is common.
-    // However, if your asset has its own internal origin that's not (0,0), this can get more complex.
-
-    element.setAttribute('transform', transformString);
-    console.log(`Applied transform: ${transformString} to element ID: ${element.id || 'N/A'}`);
-}
-*/
-
-
-
-
-        function startGame() {
-             playPooledSound('jump', 'sounds/gameOver.wav');
-            gamePaused = false; // Reset paused state
-            if (animationFrameId === null) {
-                hidePauseMenu(); // Hide pause menu if visible
-                console.log("Starting new game.");
-                score = 0; // Reset score
-                initializeGame(); // Reset game state
-                //startGame(); // Start the game loop dont do that it's recusive...!
-                console.log("Starting game loop.");
-                lastTimestamp = performance.now();
-                animationFrameId = requestAnimationFrame((timestamp) => gameLoop(timestamp, liveGameArea));
-                gameStopped = false; // Game is now running
-            } else {
-                console.log("Game is already running, cannot start again.");
-            }
-
+    function startGame() {
+        playPooledSound('jump', 'sounds/gameOver.wav');
+        gamePaused = false; // Reset paused state
+        if (animationFrameId === null) {
+            hidePauseMenu(); // Hide pause menu if visible
+            console.log("Starting new game.");
+            score = 0; // Reset score
+            initializeGame(); // Reset game state
+            //startGame(); // Start the game loop dont do that it's recusive...!
+            console.log("Starting game loop.");
+            lastTimestamp = performance.now();
+            animationFrameId = requestAnimationFrame((timestamp) => gameLoop(timestamp, liveGameArea));
+            gameStopped = false; // Game is now running
+        } else {
+            console.log("Game is already running, cannot start again.");
         }
+        if (spriteSheetLoaded) {
+            spawnAnimatedSprite(); // Spawns with "default_fall" animation at random X, top Y
+            spawnChefKetchup(100,100);
+        }
+
+    }
 
 
 
@@ -888,90 +763,6 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
             }
         }
 
-        /*function fitSvgToScreenWithPadding(svgElement, designedWidth, designedHeight, PADDING_TOP_BOTTOM = 5) {
-            if (!svgElement) {
-                console.error("fitSvgToScreenWithPadding: svgElement is not defined!");
-                return;
-            }
-            if (!designedWidth || !designedHeight) {
-                console.warn("fitSvgToScreenWithPadding: designedWidth or designedHeight not provided. Attempting to use viewBox.");
-                const vb = svgElement.viewBox.baseVal;
-                if (vb && vb.width && vb.height) {
-                    designedWidth = vb.width;
-                    designedHeight = vb.height;
-                } else {
-                    console.error("fitSvgToScreenWithPadding: Cannot determine aspect ratio. Please set viewBox or pass designed dimensions.");
-                    return;
-                }
-            }
-
-            const viewportWidth = window.innerWidth;
-            // Reduce available height by the total top and bottom padding
-            const availableHeight = window.innerHeight - (PADDING_TOP_BOTTOM * 2);
-            // Use viewportWidth as availableWidth, assuming no horizontal padding for now
-            const availableWidth = viewportWidth;
-
-
-            const svgAspectRatio = designedWidth / designedHeight;
-            // Calculate aspect ratio of the *available space* after padding
-            const availableSpaceAspectRatio = availableWidth / availableHeight;
-
-            let newWidth, newHeight;
-
-            if (availableSpaceAspectRatio > svgAspectRatio) {
-                // Available space is wider than SVG aspect ratio
-                // -> SVG height should match availableHeight, width adjusts
-                newHeight = availableHeight;
-                newWidth = availableHeight * svgAspectRatio;
-            } else {
-                // Available space is taller (or same aspect) than SVG aspect ratio
-                // -> SVG width should match availableWidth, height adjusts
-                newWidth = availableWidth;
-                newHeight = availableWidth / svgAspectRatio;
-            }
-
-            // Ensure calculated dimensions are not negative if padding is too large
-            newWidth = Math.max(0, newWidth);
-            newHeight = Math.max(0, newHeight);
-
-            svgElement.style.width = `${newWidth}px`;
-            svgElement.style.height = `${newHeight}px`;
-
-            svgElement.setAttribute('viewBox', `0 0 ${designedWidth} ${designedHeight}`);
-            svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-
-            // Centering Logic
-            // The container for this centering is effectively the viewport.
-            // We want to center it within the viewport.
-            // The (0,0) of the viewport is top-left.
-            // top: 50% puts the element's top at the viewport's vertical midpoint.
-            // transform: translateY(-50%) then shifts it up by half of ITS OWN new height.
-            // This achieves perfect vertical centering in the viewport.
-            // The padding is already accounted for in newHeight, so the standard centering works.
-
-            svgElement.style.position = 'absolute';
-            svgElement.style.top = '50%';
-            svgElement.style.left = '50%';
-            svgElement.style.transform = 'translate(-50%, -50%)';
-
-            // No direct CSS padding on svgElement needed here because we've
-            // already sized it to leave space around it.
-            // If you add CSS padding to svgElement, it will be *in addition* to this.
-        }*/
-
-        // --- Example Usage ---
-        // const liveGameArea = document.getElementById('gameArea'); // Your SVG element
-        const NATIVE_SVG_WIDTH = 1600;
-        const NATIVE_SVG_HEIGHT = 900;
-        const PADDING_VALUE = 5; // 5px padding top and bottom
-
-/*        if (liveGameArea) {
-            fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
-            window.addEventListener('resize', () => {
-                fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT, PADDING_VALUE);
-            });
-        }*/
-
         // --- Control and Setup ---
         // ... (initializeGame, button event listeners remain the same) ...
         function resumeButtonFunc() {
@@ -996,15 +787,11 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         function initializeGame() {
             loadSettings(); // Load settings from localStorage
             loadProgress(); // Load progress from localStorage
-            //updateScoreDisplay();
-
-
             // Clear array
             activeGameElements = [];
             currentWordIndex = 0;
             lastSpawnTime = performance.now();
 
-            showScoresplat("GAME", "START!")
         }
         function showGameControls() {
             if (controlsOverlay) {
@@ -1025,8 +812,6 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
         function showWelcomeScreen(){
             if (welcomeScreen) {
-                //welcomeScreen.style.display = 'flex'; // Show welcome screen
-                //welcomeScreen.style.visibility = 'visible'; // Make welcome screen visible
                 welcomeBackgroundImageContainer.style.display = 'block'; // Show background image container
             } else {
                 console.error("Welcome screen not found.");
@@ -1034,8 +819,6 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         }
         function hideWelcomeScreen() {
             if (welcomeScreen) {
-                //welcomeScreen.style.display = 'none'; // Hide welcome screen
-                //welcomeScreen.style.visibility = 'hidden'; // Hide welcome screen
                 welcomeBackgroundImageContainer.style.display = 'none'; // Hide background image container
             } else {
                 console.error("Welcome screen not found.");
@@ -1052,150 +835,439 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         let settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
         let settingsOverlay = document.getElementById('settingsOverlay');
         let closeSettingsButton = document.getElementById('closeSettingsButton')
-        // Initial Setup
-        //updateScoreDisplay();
 
 
-// Get references to any UI elements you might use for messages
-const rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
+        const rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
 
 
         /**
  * Checks the current screen orientation and takes appropriate action.
  * This function will be our main handler.
  */
-function handleOrientationChange() {
-    let currentOrientation = '';
-    if (screen.orientation && screen.orientation.type) {
-        currentOrientation = screen.orientation.type;
-        console.log(`Screen Orientation API: ${currentOrientation}`);
-    } else if (window.matchMedia("(orientation: landscape)").matches) {
-        currentOrientation = 'landscape-primary'; // General landscape
-        console.log('MatchMedia: Landscape');
-    } else if (window.matchMedia("(orientation: portrait)").matches) {
-        currentOrientation = 'portrait-primary'; // General portrait
-        console.log('MatchMedia: Portrait');
-    } else if (typeof window.orientation !== 'undefined') {
-        // Fallback to window.orientation (degrees)
-        console.log(`Window.orientation (degrees): ${window.orientation}`);
-        switch (window.orientation) {
-            case 0:
-            case 180: // Portrait or upside-down portrait
-                currentOrientation = 'portrait-primary';
-                break;
-            case 90:
-            case -90: // Landscape
-                currentOrientation = 'landscape-primary';
-                break;
-            default:
-                currentOrientation = 'unknown';
+    function handleOrientationChange() {
+        let currentOrientation = '';
+        if (screen.orientation && screen.orientation.type) {
+            currentOrientation = screen.orientation.type;
+            console.log(`Screen Orientation API: ${currentOrientation}`);
+        } else if (window.matchMedia("(orientation: landscape)").matches) {
+            currentOrientation = 'landscape-primary'; // General landscape
+            console.log('MatchMedia: Landscape');
+        } else if (window.matchMedia("(orientation: portrait)").matches) {
+            currentOrientation = 'portrait-primary'; // General portrait
+            console.log('MatchMedia: Portrait');
+        } else if (typeof window.orientation !== 'undefined') {
+            // Fallback to window.orientation (degrees)
+            console.log(`Window.orientation (degrees): ${window.orientation}`);
+            switch (window.orientation) {
+                case 0:
+                case 180: // Portrait or upside-down portrait
+                    currentOrientation = 'portrait-primary';
+                    break;
+                case 90:
+                case -90: // Landscape
+                    currentOrientation = 'landscape-primary';
+                    break;
+                default:
+                    currentOrientation = 'unknown';
+            }
+        } else {
+            currentOrientation = 'unknown';
+            console.log('Could not determine orientation.');
         }
-    } else {
-        currentOrientation = 'unknown';
-        console.log('Could not determine orientation.');
-    }
 
-    // --- Your Game's Logic for Orientation ---
-    // Since you prefer "sensorPortrait" and want to enforce it,
-    // your primary goal here is to detect if it's NOT portrait.
-    if (currentOrientation.includes('landscape')) {
-        console.warn("Device is in Landscape. Game designed for Portrait.");
-        if (rotateMessageOverlay) {
-            rotateMessageOverlay.innerHTML = "<p>This experience is best in Portrait mode. Please rotate your device.</p>";
-            rotateMessageOverlay.style.display = 'flex';
-        }
-        // Consider implicitly pausing game logic if it's truly unplayable or graphics break
-        // if (!gamePaused) { // Assuming 'gamePaused' is your global pause flag
-        //    setPauseState(true, 'orientation'); // Pass a reason if your pause system supports it
-        // }
-    } else if (currentOrientation.includes('portrait')) {
-        console.log("Device is in Portrait. Correct orientation for the game.");
-        if (rotateMessageOverlay) {
-            rotateMessageOverlay.style.display = 'none';
-        }
-        // If you implicitly paused due to orientation, you might resume here,
-        // but be careful not to override a user's explicit pause.
-        // if (wasPausedByOrientation && gamePaused) {
-        //    setPauseState(false, 'orientation');
-        // }
-    } else {
-        console.log("Orientation is unknown or not strictly portrait/landscape.");
-        // Decide how to handle this case, maybe hide the message.
-        if (rotateMessageOverlay) {
-            rotateMessageOverlay.style.display = 'none';
+        // --- Your Game's Logic for Orientation ---
+        // Since you prefer "sensorPortrait" and want to enforce it,
+        // your primary goal here is to detect if it's NOT portrait.
+        if (currentOrientation.includes('landscape')) {
+            console.warn("Device is in Landscape. Game designed for Portrait.");
+            if (rotateMessageOverlay) {
+                rotateMessageOverlay.innerHTML = "<p>This experience is best in Portrait mode. Please rotate your device.</p>";
+                rotateMessageOverlay.style.display = 'flex';
+            }
+            // Consider implicitly pausing game logic if it's truly unplayable or graphics break
+            // if (!gamePaused) { // Assuming 'gamePaused' is your global pause flag
+            //    setPauseState(true, 'orientation'); // Pass a reason if your pause system supports it
+            // }
+        } else if (currentOrientation.includes('portrait')) {
+            console.log("Device is in Portrait. Correct orientation for the game.");
+            if (rotateMessageOverlay) {
+                rotateMessageOverlay.style.display = 'none';
+            }
+            // If you implicitly paused due to orientation, you might resume here,
+            // but be careful not to override a user's explicit pause.
+            // if (wasPausedByOrientation && gamePaused) {
+            //    setPauseState(false, 'orientation');
+            // }
+        } else {
+            console.log("Orientation is unknown or not strictly portrait/landscape.");
+            // Decide how to handle this case, maybe hide the message.
+            if (rotateMessageOverlay) {
+                rotateMessageOverlay.style.display = 'none';
+            }
         }
     }
-}
 
 /**
  * Initializes orientation detection listeners.
  */
-function initOrientationDetection() {
-    console.log("Initializing JavaScript orientation detection...");
+    function initOrientationDetection() {
+        console.log("Initializing JavaScript orientation detection...");
 
-    // 1. Modern approach: screen.orientation API
-    if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
-        screen.orientation.addEventListener('change', () => {
-            console.log("Event: screen.orientation 'change'");
-            handleOrientationChange();
-        });
-        console.log("Attached listener to screen.orientation 'change'.");
-    } else {
-        // 2. Fallback: matchMedia for orientation
-        const landscapeMatcher = window.matchMedia("(orientation: landscape)");
-        if (typeof landscapeMatcher.addEventListener === 'function') {
-            landscapeMatcher.addEventListener('change', (e) => {
-                console.log(`Event: matchMedia '(orientation: landscape)' changed. Matches: ${e.matches}`);
+        // 1. Modern approach: screen.orientation API
+        if (screen.orientation && typeof screen.orientation.addEventListener === 'function') {
+            screen.orientation.addEventListener('change', () => {
+                console.log("Event: screen.orientation 'change'");
                 handleOrientationChange();
             });
-            console.log("Attached listener to matchMedia '(orientation: landscape)'.");
-            // Note: You might also want to listen to "(orientation: portrait)" changes
-            // if the landscape one doesn't fire reliably on all transitions back to portrait.
-            // However, usually one is sufficient as handleOrientationChange checks both.
-        } else if (typeof window.addEventListener === 'function') {
-            // 3. Older fallback: 'orientationchange' event on window
-            window.addEventListener('orientationchange', () => {
-                console.log("Event: window 'orientationchange'");
-                handleOrientationChange();
-            }, false);
-            console.log("Attached listener to window 'orientationchange'.");
+            console.log("Attached listener to screen.orientation 'change'.");
         } else {
-            console.warn("Could not attach any reliable orientation change listeners.");
+            // 2. Fallback: matchMedia for orientation
+            const landscapeMatcher = window.matchMedia("(orientation: landscape)");
+            if (typeof landscapeMatcher.addEventListener === 'function') {
+                landscapeMatcher.addEventListener('change', (e) => {
+                    console.log(`Event: matchMedia '(orientation: landscape)' changed. Matches: ${e.matches}`);
+                    handleOrientationChange();
+                });
+                console.log("Attached listener to matchMedia '(orientation: landscape)'.");
+                // Note: You might also want to listen to "(orientation: portrait)" changes
+                // if the landscape one doesn't fire reliably on all transitions back to portrait.
+                // However, usually one is sufficient as handleOrientationChange checks both.
+            } else if (typeof window.addEventListener === 'function') {
+                // 3. Older fallback: 'orientationchange' event on window
+                window.addEventListener('orientationchange', () => {
+                    console.log("Event: window 'orientationchange'");
+                    handleOrientationChange();
+                }, false);
+                console.log("Attached listener to window 'orientationchange'.");
+            } else {
+                console.warn("Could not attach any reliable orientation change listeners.");
+            }
+        }
+
+        // Perform an initial check when the script loads
+        console.log("Performing initial orientation check.");
+        handleOrientationChange();
+    }
+
+    function showAndroidToast() {
+        if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
+            // We are likely in the Android WebView with the bridge
+            var message = "Hello from JavaScript! 👋";
+            AndroidBridge.showToast(message);
+            console.log("Called AndroidBridge.showToast('" + message + "')");
+        } else {
+            // We are likely NOT in the Android WebView, or bridge isn't ready
+            console.warn("AndroidBridge is not defined. Toast functionality skipped.");
+            // Optionally, provide a fallback or do nothing silently:
+            // alert("Toast feature is only available in the app.");
         }
     }
 
-    // Perform an initial check when the script loads
-    console.log("Performing initial orientation check.");
-    handleOrientationChange();
+    function vibrateDevicePattern() {
+        if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
+            var pattern = "0,200,100,400";
+            AndroidBridge.vibrateWithPattern(pattern);
+            console.log("Called AndroidBridge.vibrateWithPattern('" + pattern + "')");
+        } else {
+            console.warn("AndroidBridge is not defined. Vibration functionality skipped.");
+            // Optionally, hide the button or provide feedback:
+            // document.getElementById('vibrateButton').style.display = 'none';
+            // alert("Vibration is only available in the app.");
+        }
+    }
+
+// --- Global or within your game's asset loading scope ---
+/*
+---------------------------------------
+
+load in sprites
+
+---------------------------------------------------------------
+*/
+// --- Asset Loading ---
+const SPRITE_SHEET_SRC = 'images/pickle/master-sprite.png';
+const ASSET_PATHS = {
+    masterSheet: 'images/pickle/master-sprite.png',
+    // You might still have other images for backgrounds, UI elements not on the sheet, etc.
+};
+// --- Global or within your game's asset loading scope ---
+let spriteSheetImage = null;
+let spriteSheetLoaded = false;
+
+
+// ***** NEW: Define your animations from the master sheet *****
+const MASTER_SHEET_FRAMES_PER_ROW = 8; // IMPORTANT: How many frames are in EACH ROW of your master sheet
+// Example: If your sheet is 256px wide and frames are 32px, this is 8.
+// This MUST match your actual sprite sheet layout.
+
+const ANIMATIONS = {
+    "default_fall": { // A fallback or the animation your current spawnAnimatedSprite makes
+        sheet: SPRITE_SHEET_SRC, // We'll assume one master sheet for now
+        startFrameOnSheet: 0,    // The global index of the first frame of THIS animation
+        frameWidth: 64,          // Width of a single frame for THIS animation
+        frameHeight: 64,         // Height of a single frame for THIS animation
+        totalFramesInAnimation: 8,// Number of frames in THIS animation sequence
+        animationSpeed: 100,     // Milliseconds per frame for THIS animation
+        loop: true
+    },
+    "cheff_ketchup_attack": {
+        sheet: SPRITE_SHEET_SRC,
+        startFrameOnSheet: 0,       // Starts at the very first frame (index 0) of the master sheet
+        frameWidth: 64,             // Chef Ketchup's frames are 64x64 pixels
+        frameHeight: 64,
+        totalFramesInAnimation: 3,  // The attack animation is 3 frames long
+        animationSpeed: 150,        // ms per frame (adjust for desired speed, 150ms is ~6.6 FPS)
+        loop: false,                // Attacks usually don't loop
+        // Optional: Define what happens when the animation finishes
+        // onEnd: "cheff_ketchup_idle" // Example: Switch to an idle animation
+        // (You'd need to define "cheff_ketchup_idle" too)
+    },
+
+    "cheff_ketchup_walk": { // Example companion idle animation
+        sheet: SPRITE_SHEET_SRC,
+        startFrameOnSheet: 0,      // Assumes idle starts right after attack (frames 0,1,2 are attack)
+        frameWidth: 64,
+        frameHeight: 64,
+        totalFramesInAnimation: 2, // e.g., a 2-frame idle
+        animationSpeed: 300,
+        loop: true
+    }
+    // Add more animations here following the same structure
+    // "explosion": { startFrameOnSheet: 11, frameWidth: 64, frameHeight: 64, totalFramesInAnimation: 5, animationSpeed: 80, loop: false }
+};
+// ***************************************************************
+
+// ... (your existing loadSpriteSheet function)
+// function loadSpriteSheet(callback) { ... }
+
+
+const loadedSpriteSheets = {}; // Will primarily hold loadedSpriteSheets.masterSheet
+let allAssetsLoaded = false; // Or a more specific flag like masterSheetLoaded
+
+    function loadSpriteSheet(callback) {
+        spriteSheetImage = new Image();
+        spriteSheetImage.onload = () => {
+            spriteSheetLoaded = true;
+            console.log("Sprite sheet loaded successfully.");
+            if (callback) callback();
+        };
+        spriteSheetImage.onerror = () => {
+            console.error("Failed to load sprite sheet.");
+            spriteSheetLoaded = false;
+        };
+        spriteSheetImage.src = SPRITE_SHEET_SRC;
+    }
+
+    // Call this during your game's initialization phase
+    // loadSpriteSheet(() => {
+    //    // Now you can safely spawn sprites
+    //    spawnAnimatedSprite();
+    // });
+
+
+
+
+    // --- Somewhere accessible, perhaps near your activeGameElements array ---
+    // const activeGameElements = []; // You already have this
+
+// --- Somewhere accessible, perhaps near your activeGameElements array ---
+// const activeGameElements = []; // You already have this
+
+function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY, customProps = {}) {
+    if (!spriteSheetLoaded || !spriteSheetImage) {
+        console.warn("Sprite sheet not loaded yet. Cannot spawn sprite.");
+        return;
+    }
+
+    const animData = ANIMATIONS[animationName];
+    if (!animData) {
+        console.warn(`Animation "${animationName}" not found in ANIMATIONS definitions.`);
+        return;
+    }
+
+    // --- Configuration for THIS SPECIFIC SPRITE/ANIMATION ---
+    const frameWidth = animData.frameWidth;
+    const frameHeight = animData.frameHeight;
+    const totalFrames = animData.totalFramesInAnimation;
+    const animationSpeed = animData.animationSpeed;
+    const loop = animData.loop;
+    const startFrameOnSheet = animData.startFrameOnSheet; // Get the starting frame on the sheet
+
+    const newSprite = {
+        type: 'sprite', // To distinguish from rectangles
+        image: spriteSheetImage,
+        x: initialX !== undefined ? initialX : Math.random() * (canvas.width - frameWidth),
+        y: initialY !== undefined ? initialY : -frameHeight, // Start just above screen if no Y provided
+        width: frameWidth,   // Display width on canvas
+        height: frameHeight, // Display height on canvas
+        speed: customProps.speed || 80, // Movement speed (pixels per second)
+        direction: customProps.direction || { x: 0, y: 1 }, // Moving straight down by default
+
+        // Animation properties
+        animationName: animationName, // Store the name of the current animation
+        frameWidth: frameWidth,       // Frame width for this animation
+        frameHeight: frameHeight,     // Frame height for this animation
+        startFrameOnSheet: startFrameOnSheet, // Global start frame of this animation on the sheet
+        totalFramesInAnimation: totalFrames,  // How many frames THIS animation has
+        currentFrameInAnimation: 0,           // Always starts at frame 0 OF THE CURRENT ANIMATION
+        animationSpeed: animationSpeed,       // ms per frame
+        lastFrameTime: 0,                     // Timestamp of when the last frame was updated
+        loop: loop,                           // Should the animation loop?
+
+        // Allow passing other custom properties
+        ...customProps
+    };
+
+    activeGameElements.push(newSprite);
+    console.log(`Spawned sprite with animation "${animationName}":`, newSprite);
+    return newSprite; // Return the new sprite so it can be referenced if needed
 }
 
-function showAndroidToast() {
-    if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
-        // We are likely in the Android WebView with the bridge
-        var message = "Hello from JavaScript! 👋";
-        AndroidBridge.showToast(message);
-        console.log("Called AndroidBridge.showToast('" + message + "')");
-    } else {
-        // We are likely NOT in the Android WebView, or bridge isn't ready
-        console.warn("AndroidBridge is not defined. Toast functionality skipped.");
-        // Optionally, provide a fallback or do nothing silently:
-        // alert("Toast feature is only available in the app.");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+let chefKetchup; // Variable to hold our Chef Ketchup sprite instance
+
+function spawnChefKetchup(x, y) {
+    const customChefProps = {
+        entityType: 'enemy_chef_ketchup', // For specific logic if needed
+        health: 100, // Example custom property
+        // ... any other properties specific to this character
+    };
+    // Spawn him initially in his idle state
+    chefKetchup = spawnAnimatedSprite("cheff_ketchup_walk", x, y, customChefProps);
+    if (chefKetchup) {
+        console.log("Chef Ketchup spawned!", chefKetchup);
     }
 }
 
-function vibrateDevicePattern() {
-    if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
-        var pattern = "0,200,100,400";
-        AndroidBridge.vibrateWithPattern(pattern);
-        console.log("Called AndroidBridge.vibrateWithPattern('" + pattern + "')");
-    } else {
-        console.warn("AndroidBridge is not defined. Vibration functionality skipped.");
-        // Optionally, hide the button or provide feedback:
-        // document.getElementById('vibrateButton').style.display = 'none';
-        // alert("Vibration is only available in the app.");
-    }
+
+
+
+
+
+
+
+function spawnTestRectangle() {
+    const rectWidth = 50;
+    const rectHeight = 50;
+
+    const newRect = {
+        type: 'rectangle', // Matches the type our drawGameElements function looks for
+        x: Math.random() * (canvas.width - rectWidth), // Random initial X
+        y: -rectHeight, // Start just above the screen
+        width: rectWidth,
+        height: rectHeight,
+        color: `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`, // Random color
+        speed: 100, // Pixels per second
+        direction: { x: 0, y: 1 } // Moving straight down
+    };
+
+    activeGameElements.push(newRect);
+    console.log("Spawned test rectangle:", newRect);
 }
 
+function drawGameElements(ctx) {
+    activeGameElements.forEach(element => {
+        if (element.type === 'rectangle') {
+            ctx.fillStyle = element.color || 'gray';
+            ctx.fillRect(element.x, element.y, element.width, element.height);
+        } else if (element.type === 'sprite' && element.image && element.animationName) {
+            // Calculate source X and Y from the sprite sheet
+
+            // This is the frame number within the current animation sequence (e.g., 0, 1, 2, 3)
+            const frameInCurrentAnim = element.currentFrameInAnimation;
+
+            // This is the actual global frame index on the master sprite sheet
+            // It's the sum of where the animation starts on the sheet + which frame of that animation we're on
+            const actualSheetFrame = element.startFrameOnSheet + frameInCurrentAnim;
+
+            // Calculate sx and sy using the MASTER_SHEET_FRAMES_PER_ROW
+            const sx = (actualSheetFrame % MASTER_SHEET_FRAMES_PER_ROW) * element.frameWidth;
+            const sy = Math.floor(actualSheetFrame / MASTER_SHEET_FRAMES_PER_ROW) * element.frameHeight;
+
+            // Inside the 'else if (element.type === 'sprite' ...)' block in drawGameElements
+            // ... (calculations for sx, sy) ...
+
+            console.log(`DRAWING SPRITE: ${element.animationName}`);
+            console.log(`  Image:`, element.image); // Should show the <img> element
+            console.log(`  Source Coords (sx, sy): ${sx}, ${sy}`);
+            console.log(`  Source Dimensions (sWidth, sHeight): ${element.frameWidth}, ${element.frameHeight}`);
+            console.log(`  Dest Coords (dx, dy): ${element.x}, ${element.y}`);
+            console.log(`  Dest Dimensions (dWidth, dHeight): ${element.width}, ${element.height}`);
+            console.log(`  MASTER_SHEET_FRAMES_PER_ROW: ${MASTER_SHEET_FRAMES_PER_ROW}`);
+            console.log(`  element.startFrameOnSheet: ${element.startFrameOnSheet}`);
+            console.log(`  element.currentFrameInAnimation: ${element.currentFrameInAnimation}`);
+
+
+            ctx.drawImage(
+                element.image,
+                sx,
+                sy,
+                element.frameWidth,  // Source frame width
+                element.frameHeight, // Source frame height
+                element.x,
+                element.y,
+                element.width,       // Display width on canvas
+                element.height       // Display height on canvas
+            );
+
+        }else { // If it's a sprite but still failed
+            console.warn(`GENERIC SPRITE FAILED DRAW CONDITIONS: Type: ${element.type}, Image: ${!!element.image}, AnimName: ${element.animationName}`);
+        }
+    });
+}
+
+
+// Function to handle resizing the canvas
+function resizeGameCanvas() {
+    // Set the canvas's internal drawing resolution to match the window's viewport size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+
+
+
+
+    // Your CSS for #gameArea (max-width: 100%, max-height: 100%, etc.)
+    // will then scale the visual display of this canvas element to fit its container.
+    // If the canvas's container (e.g., the <body>) is set up to be full screen,
+    // the canvas will effectively fill the screen.
+
+    console.log(`Canvas drawing surface resized to: ${canvas.width}x${canvas.height}`);
+
+    // Note: Resetting canvas.width or .height clears the canvas and its context.
+    // If you have specific context settings you apply once (e.g., ctx.imageSmoothingEnabled = false),
+    // you might need to re-apply them here, or ensure they are set in each draw call if necessary.
+
+    // If your game elements need explicit repositioning based on the new canvas size
+    // (beyond what using canvas.width/height in their logic already provides),
+    // you would call a function here to do that.
+    // e.g., adjustElementPositionsAfterResize();
+}
+
+// Ensure 'canvas' is defined (e.g., const canvas = document.getElementById('gameArea');)
+if (canvas) {
+    // Call it once an initial page load to set the size correctly from the start
+    resizeGameCanvas();
+
+    // Add an event listener to call resizeGameCanvas whenever the window is resized
+    window.addEventListener('resize', resizeGameCanvas);
+} else {
+    console.error("Canvas element not found when trying to set up resize handling.");
+}
 //// --- DOMContentLoaded Event Listener ---
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1313,8 +1385,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
+
             initOrientationDetection(); // Initialize orientation detection
             vibrateDevicePattern();
+            resizeGameCanvas();
+            // Load assets then start
+            //SPRITE_SHEET_SRC
+            loadSpriteSheet(() => {
+                console.log("Assets loaded, ready to start or show main menu.");
+
+            });
         });
 
 
