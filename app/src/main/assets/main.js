@@ -1,3 +1,4 @@
+import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagment.js';
 import { simplePickleSvgString } from './constants.js';
 import { setVolume,playPooledSound } from './audioManagment.js';
 import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagment.js';
@@ -550,24 +551,57 @@ function updateGameElements(deltaTime, currentTime) { // deltaTime is in seconds
                 console.warn(`Missing animData for ${element.animationName} during update.`);
                 return; // Skip animation if data is missing
             }
-
-            if (!element.lastFrameTime) element.lastFrameTime = currentTime;
-
-            if (currentTime - element.lastFrameTime >= element.animationSpeed) { // Use element's specific speed
-                element.currentFrameInAnimation++; // Increment frame WITHIN the current animation
-                if (element.currentFrameInAnimation >= element.totalFramesInAnimation) { // Check against this animation's length
-                    if (element.loop) {
-                        element.currentFrameInAnimation = 0;
-                    } else {
-                        element.currentFrameInAnimation = element.totalFramesInAnimation - 1; // Stay on last frame
-                        // Optionally handle animation end here (e.g., for explosions)
-                        // if (animData.onEnd === 'remove') activeGameElements.splice(...)
-                    }
-                }
-                element.lastFrameTime = currentTime;
-            }
+        }
+        // ***** ADD THIS LINE *****
+        if (element.lastFrameTime === undefined || element.lastFrameTime === 0) { // Check if it's undefined or explicitly 0 from spawn
+            element.lastFrameTime = currentTime;
         }
         // Boundary checks, etc.
+        // Inside updateGameElements animation logic
+        // ...
+        if (currentTime - element.lastFrameTime >= element.currentFrameDuration) {
+            element.currentFrameIndex++;
+            const animDef = ANIMATIONS[element.animationName]; // Get the full animation definition
+
+            if (element.currentFrameIndex >= element.totalFramesInAnimation) {
+                if (element.animationLoop) {
+                    element.currentFrameIndex = 0;
+                } else {
+                    element.currentFrameIndex = element.totalFramesInAnimation - 1; // Stay on last frame
+                    const lastFrameDef = animDef.frames[element.currentFrameIndex];
+                    if (lastFrameDef.onEnd === "switchToIdle") { // Example onEnd handling
+                        // Code to switch animation to "cheff_ketchup_idle"
+                        element.animationName = "cheff_ketchup_idle";
+                        // Reset animation state for the new animation:
+                        const newAnimDef = ANIMATIONS[element.animationName];
+                        element.currentFrameIndex = 0;
+                        element.totalFramesInAnimation = newAnimDef.frames.length;
+                        element.animationLoop = newAnimDef.loop;
+                        const firstFrameOfNewAnim = newAnimDef.frames[0];
+                        element.currentFrameDuration = firstFrameOfNewAnim.duration || newAnimDef.defaultAnimationSpeed;
+                        element.width = firstFrameOfNewAnim.sWidth;
+                        element.height = firstFrameOfNewAnim.sHeight;
+                    }
+                    // ... other onEnd logic
+                }
+            }
+
+            const currentFrameDef = animDef.frames[element.currentFrameIndex];
+
+            // ***** ADD THIS SAFETY CHECK *****
+            if (!currentFrameDef) {
+                console.error(`Inconsistent animation state: No frameDef for ${element.animationName} at index ${element.currentFrameIndex}`);
+                return; // or handle error appropriately
+            }
+            // ********************************
+
+            element.currentFrameDuration = currentFrameDef.duration || animDef.defaultAnimationSpeed;
+            element.width = currentFrameDef.sWidth;   // Update width for drawing
+            element.height = currentFrameDef.sHeight; // Update height for drawing
+            element.lastFrameTime = currentTime;
+        }
+        // ...
+
     });
 }
 
@@ -696,8 +730,9 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
             console.log("Game is already running, cannot start again.");
         }
         if (spriteSheetLoaded) {
-            spawnAnimatedSprite(); // Spawns with "default_fall" animation at random X, top Y
-            spawnChefKetchup(100,100);
+            //spawnAnimatedSprite(); // Spawns with "default_fall" animation at random X, top Y
+            // CORRECT - passing an object for direction
+            spawnChefKetchupWalking(100, 100, { x: 1, y: 0 });
         }
 
     }
@@ -1001,36 +1036,18 @@ const MASTER_SHEET_FRAMES_PER_ROW = 8; // IMPORTANT: How many frames are in EACH
 // This MUST match your actual sprite sheet layout.
 
 const ANIMATIONS = {
-    "default_fall": { // A fallback or the animation your current spawnAnimatedSprite makes
-        sheet: SPRITE_SHEET_SRC, // We'll assume one master sheet for now
-        startFrameOnSheet: 0,    // The global index of the first frame of THIS animation
-        frameWidth: 64,          // Width of a single frame for THIS animation
-        frameHeight: 64,         // Height of a single frame for THIS animation
-        totalFramesInAnimation: 8,// Number of frames in THIS animation sequence
-        animationSpeed: 100,     // Milliseconds per frame for THIS animation
-        loop: true
-    },
-    "cheff_ketchup_attack": {
-        sheet: SPRITE_SHEET_SRC,
-        startFrameOnSheet: 0,       // Starts at the very first frame (index 0) of the master sheet
-        frameWidth: 64,             // Chef Ketchup's frames are 64x64 pixels
-        frameHeight: 64,
-        totalFramesInAnimation: 3,  // The attack animation is 3 frames long
-        animationSpeed: 150,        // ms per frame (adjust for desired speed, 150ms is ~6.6 FPS)
-        loop: false,                // Attacks usually don't loop
-        // Optional: Define what happens when the animation finishes
-        // onEnd: "cheff_ketchup_idle" // Example: Switch to an idle animation
-        // (You'd need to define "cheff_ketchup_idle" too)
-    },
-
-    "cheff_ketchup_walk": { // Example companion idle animation
-        sheet: SPRITE_SHEET_SRC,
-        startFrameOnSheet: 0,      // Assumes idle starts right after attack (frames 0,1,2 are attack)
-        frameWidth: 64,
-        frameHeight: 64,
-        totalFramesInAnimation: 2, // e.g., a 2-frame idle
-        animationSpeed: 300,
-        loop: true
+    "cheff_ketchup_walk": {
+        sheet: SPRITE_SHEET_SRC, // Could still be here, or even per-frame
+        loop: true,              // Moved to top level of animation definition
+        defaultAnimationSpeed: 300, // A fallback if a frame doesn't specify duration
+        frames: [
+            // Frame 0 of "cheff_ketchup_walk"
+            { sx: 0,  sy: 0, sWidth: 90, sHeight: 150, duration: 300 },
+            // Frame 1 of "cheff_ketchup_walk"
+            { sx: 100, sy: 0, sWidth: 110, sHeight: 150, duration: 300 }
+            // If it was a 3rd frame:
+            // { sx: 140, sy: 0, sWidth: 70, sHeight: 140, duration: 300 }
+        ]
     }
     // Add more animations here following the same structure
     // "explosion": { startFrameOnSheet: 11, frameWidth: 64, frameHeight: 64, totalFramesInAnimation: 5, animationSpeed: 80, loop: false }
@@ -1079,49 +1096,62 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
         return;
     }
 
-    const animData = ANIMATIONS[animationName];
+    const animData = ANIMATIONS[animationName]; // Get the animation definition
     if (!animData) {
-        console.warn(`Animation "${animationName}" not found in ANIMATIONS definitions.`);
+        console.warn(`Animation "${animationName}" not found.`);
+        return;
+    }
+    if (!animData.frames || animData.frames.length === 0) {
+        console.warn(`Animation "${animationName}" has no frames defined.`);
         return;
     }
 
-    // --- Configuration for THIS SPECIFIC SPRITE/ANIMATION ---
-    const frameWidth = animData.frameWidth;
-    const frameHeight = animData.frameHeight;
-    const totalFrames = animData.totalFramesInAnimation;
-    const animationSpeed = animData.animationSpeed;
-    const loop = animData.loop;
-    const startFrameOnSheet = animData.startFrameOnSheet; // Get the starting frame on the sheet
+    // --- This is the part you're focusing on ---
+    const firstFrameData = animData.frames[0]; // Get data for the VERY FIRST frame of this animation
 
     const newSprite = {
-        type: 'sprite', // To distinguish from rectangles
-        image: spriteSheetImage,
-        x: initialX !== undefined ? initialX : Math.random() * (canvas.width - frameWidth),
-        y: initialY !== undefined ? initialY : -frameHeight, // Start just above screen if no Y provided
-        width: frameWidth,   // Display width on canvas
-        height: frameHeight, // Display height on canvas
-        speed: customProps.speed || 80, // Movement speed (pixels per second)
-        direction: customProps.direction || { x: 0, y: 1 }, // Moving straight down by default
+        type: 'sprite',
+        image: spriteSheetImage, // Assuming one master sheet for now.
+        // Could also be: loadedSpriteSheets[animData.sheet] if you support multiple sheets.
+        x: initialX !== undefined ? initialX : Math.random() * (canvas.width - firstFrameData.sWidth), // Use first frame's width for default positioning
+        y: initialY !== undefined ? initialY : -firstFrameData.sHeight,      // Use first frame's height for default positioning
 
-        // Animation properties
-        animationName: animationName, // Store the name of the current animation
-        frameWidth: frameWidth,       // Frame width for this animation
-        frameHeight: frameHeight,     // Frame height for this animation
-        startFrameOnSheet: startFrameOnSheet, // Global start frame of this animation on the sheet
-        totalFramesInAnimation: totalFrames,  // How many frames THIS animation has
-        currentFrameInAnimation: 0,           // Always starts at frame 0 OF THE CURRENT ANIMATION
-        animationSpeed: animationSpeed,       // ms per frame
-        lastFrameTime: 0,                     // Timestamp of when the last frame was updated
-        loop: loop,                           // Should the animation loop?
+        // --- Animation Properties from the new structure ---
+        animationName: animationName,
+        currentFrameIndex: 0, // NEW: Index into the animData.frames array. Replaces 'currentFrameInAnimation'.
+        totalFramesInAnimation: animData.frames.length, // NEW: Calculated from the number of defined frames.
+        animationLoop: animData.loop !== undefined ? animData.loop : true, // Get loop status from animation's top level.
 
-        // Allow passing other custom properties
-        ...customProps
+        // Display dimensions on the canvas. These can change if frames have different sizes.
+        // Initialize with the dimensions of the first frame.
+        width: firstFrameData.sWidth,   // Display width on canvas, from the specific frame data.
+        height: firstFrameData.sHeight, // Display height on canvas, from the specific frame data.
+
+        // Timing for the current frame.
+        // Get initial animation speed from the first frame's duration, or the animation's default speed.
+        currentFrameDuration: firstFrameData.duration || animData.defaultAnimationSpeed || 100, // Fallback if no durations defined.
+        lastFrameTime: 0, // This remains the same: timestamp of when the current frame started displaying.
+
+        // --- End of the new animation properties ---
+
+        speed: customProps.speed || 50, // Movement speed (separate from animation speed)
+        direction: customProps.direction || { x: 0, y: 0 }, // Movement direction
+
+        ...customProps // Spread other custom properties (like entityType, health)
     };
 
+    // Properties no longer directly needed on the sprite object from the old system:
+    // - frameWidth (now derived from currentFrameData.sWidth via element.width)
+    // - frameHeight (now derived from currentFrameData.sHeight via element.height)
+    // - startFrameOnSheet (no longer relevant as each frame has its own sx, sy)
+    // - animationSpeed (replaced by currentFrameDuration)
+
     activeGameElements.push(newSprite);
-    console.log(`Spawned sprite with animation "${animationName}":`, newSprite);
-    return newSprite; // Return the new sprite so it can be referenced if needed
+    console.log(`Spawned ADVANCED sprite "${animationName}":`, newSprite);
+    return newSprite;
 }
+
+
 
 
 
@@ -1140,18 +1170,45 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
 
 let chefKetchup; // Variable to hold our Chef Ketchup sprite instance
 
-function spawnChefKetchup(x, y) {
+// Option A: A new function specific for spawning Chef Ketchup with a direction
+function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }) { // Default to walking right
+    console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection);
+
     const customChefProps = {
-        entityType: 'enemy_chef_ketchup', // For specific logic if needed
-        health: 100, // Example custom property
+        entityType: 'enemy_chef_ketchup',
+        health: 100,
+        direction: movementDirection, // Pass the desired direction here
+        speed: 5 // Example: Give Chef Ketchup a specific speed when walking
+
         // ... any other properties specific to this character
     };
-    // Spawn him initially in his idle state
+
+    // Spawn him in his walk-state (make sure "cheff_ketchup_walk" is defined in ANIMATIONS)
     chefKetchup = spawnAnimatedSprite("cheff_ketchup_walk", x, y, customChefProps);
+
     if (chefKetchup) {
-        console.log("Chef Ketchup spawned!", chefKetchup);
+        console.log("Chef Ketchup spawned walking!", chefKetchup);
+    } else {
+        console.error("Failed to spawn Chef Ketchup for walking.");
     }
+    return chefKetchup; // Return the instance if needed
 }
+
+// Option B: Modifying an existing spawnChefKetchup if you prefer
+// function spawnChefKetchup(x, y, initialAnimation = "cheff_ketchup_idle", customOverrides = {}) {
+//     const defaultChefProps = {
+//         entityType: 'enemy_chef_ketchup',
+//         health: 100,
+//         direction: { x: 0, y: 0 }, // Default to no initial movement or a specific idle direction
+//         // ... other defaults
+//     };
+//
+//     const finalProps = { ...defaultChefProps, ...customOverrides }; // Merge overrides
+//
+//     chefKetchup = spawnAnimatedSprite(initialAnimation, x, y, finalProps);
+//     // ...
+// }
+
 
 
 
@@ -1185,50 +1242,78 @@ function drawGameElements(ctx) {
             ctx.fillStyle = element.color || 'gray';
             ctx.fillRect(element.x, element.y, element.width, element.height);
         } else if (element.type === 'sprite' && element.image && element.animationName) {
-            // Calculate source X and Y from the sprite sheet
+            // --- NEW DRAWING LOGIC FOR ADVANCED ANIMATION SYSTEM ---
+            const animDef = ANIMATIONS[element.animationName];
 
-            // This is the frame number within the current animation sequence (e.g., 0, 1, 2, 3)
-            const frameInCurrentAnim = element.currentFrameInAnimation;
+            if (!animDef || !animDef.frames || animDef.frames.length === 0) {
+                if(gameStateLogs ===true)console.warn(`Draw: Animation data or frames missing for "${element.animationName}" on element:`, element);
+                return; // Cannot draw if definition is missing
+            }
 
-            // This is the actual global frame index on the master sprite sheet
-            // It's the sum of where the animation starts on the sheet + which frame of that animation we're on
-            const actualSheetFrame = element.startFrameOnSheet + frameInCurrentAnim;
+            // Ensure currentFrameIndex is valid
+            if (element.currentFrameIndex === undefined || element.currentFrameIndex < 0 || element.currentFrameIndex >= animDef.frames.length) {
+                if(gameStateLogs ===true)console.warn(`Draw: Invalid currentFrameIndex (${element.currentFrameIndex}) for "${element.animationName}". Defaulting to 0. Element:`, element);
+                element.currentFrameIndex = 0; // Fallback or handle error
+            }
 
-            // Calculate sx and sy using the MASTER_SHEET_FRAMES_PER_ROW
-            const sx = (actualSheetFrame % MASTER_SHEET_FRAMES_PER_ROW) * element.frameWidth;
-            const sy = Math.floor(actualSheetFrame / MASTER_SHEET_FRAMES_PER_ROW) * element.frameHeight;
+            const frameDef = animDef.frames[element.currentFrameIndex];
 
-            // Inside the 'else if (element.type === 'sprite' ...)' block in drawGameElements
-            // ... (calculations for sx, sy) ...
+            if (!frameDef) {
+                if(gameStateLogs ===true)console.warn(`Draw: Frame definition missing for index ${element.currentFrameIndex} in "${element.animationName}". Element:`, element);
+                return; // Cannot draw if specific frame data is missing
+            }
 
-            console.log(`DRAWING SPRITE: ${element.animationName}`);
-            console.log(`  Image:`, element.image); // Should show the <img> element
-            console.log(`  Source Coords (sx, sy): ${sx}, ${sy}`);
-            console.log(`  Source Dimensions (sWidth, sHeight): ${element.frameWidth}, ${element.frameHeight}`);
-            console.log(`  Dest Coords (dx, dy): ${element.x}, ${element.y}`);
-            console.log(`  Dest Dimensions (dWidth, dHeight): ${element.width}, ${element.height}`);
-            console.log(`  MASTER_SHEET_FRAMES_PER_ROW: ${MASTER_SHEET_FRAMES_PER_ROW}`);
-            console.log(`  element.startFrameOnSheet: ${element.startFrameOnSheet}`);
-            console.log(`  element.currentFrameInAnimation: ${element.currentFrameInAnimation}`);
+            // Get source coordinates and dimensions directly from the frame definition
+            const sx = frameDef.sx;
+            const sy = frameDef.sy;
+            const sWidth = frameDef.sWidth;   // Source width from this specific frame
+            const sHeight = frameDef.sHeight; // Source height from this specific frame
+
+            // Destination coordinates and dimensions
+            const dx = element.x;
+            const dy = element.y;
+            // element.width and element.height on the sprite object should be updated
+            // by updateGameElements to match the current frame's sWidth/sHeight
+            // if you want 1:1 pixel drawing without scaling.
+            const dWidth = element.width;
+            const dHeight = element.height;
+
+            // Your new logging section (similar to what you had but using correct vars)
+            if(gameStateLogs ===true)console.log(`DRAWING SPRITE: ${element.animationName} (Frame Index: ${element.currentFrameIndex}) Image:`, element.image);
+            if(gameStateLogs ===true)console.log(`  Source Coords (sx, sy): ${sx}, ${sy}`);
+            if(gameStateLogs ===true)console.log(`  Source Dimensions (sWidth, sHeight): ${sWidth}, ${sHeight}`);
+            if(gameStateLogs ===true)console.log(`  Dest Coords (dx, dy): ${dx}, ${dy}`);
+            if(gameStateLogs ===true)console.log(`  Dest Dimensions (dWidth, dHeight): ${dWidth}, ${dHeight}`);
+            if(gameStateLogs ===true)console.log(`  Frame Definition Used:`, frameDef);
 
 
-            ctx.drawImage(
-                element.image,
-                sx,
-                sy,
-                element.frameWidth,  // Source frame width
-                element.frameHeight, // Source frame height
-                element.x,
-                element.y,
-                element.width,       // Display width on canvas
-                element.height       // Display height on canvas
-            );
+            if (typeof sx !== 'number' || typeof sy !== 'number' || typeof sWidth !== 'number' || typeof sHeight !== 'number' ||
+            typeof dx !== 'number' || typeof dy !== 'number' || typeof dWidth !== 'number' || typeof dHeight !== 'number' ||
+            sWidth <= 0 || sHeight <= 0 || dWidth <= 0 || dHeight <= 0 ) { // Added more checks
+                if(gameStateLogs ===true)console.error("DRAW IMAGE ABORTED: Invalid parameters for drawImage.", {sx,sy,sWidth,sHeight,dx,dy,dWidth,dHeight});
+                return;
+            }
 
-        }else { // If it's a sprite but still failed
-            console.warn(`GENERIC SPRITE FAILED DRAW CONDITIONS: Type: ${element.type}, Image: ${!!element.image}, AnimName: ${element.animationName}`);
+            try {
+                ctx.drawImage(
+                    element.image,
+                    sx,       // From frameDef
+                    sy,       // From frameDef
+                    sWidth,   // From frameDef
+                    sHeight,  // From frameDef
+                    dx,       // element.x
+                    dy,       // element.y
+                    dWidth,   // element.width (should match sWidth from currentFrameDef for no scaling)
+                    dHeight   // element.height (should match sHeight from currentFrameDef for no scaling)
+                );
+            } catch (e) {
+                console.error("Error during ctx.drawImage:", e);
+                console.error("Parameters were:", { image: element.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight });
+            }
         }
     });
 }
+
 
 
 // Function to handle resizing the canvas
