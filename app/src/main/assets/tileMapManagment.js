@@ -10,12 +10,12 @@ export const TILE_SIZE = 32; // pixels
 
 // 0 = empty, 1 = grass, 2 = dirt, 3 = platform, 4 = spikes (hazard)
 export const levelData = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...],
-    [0, 0, 0, 0, 0, 3, 3, 3, 0, 0, ...], // A platform
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...],
-    [1, 1, 2, 2, 2, 2, 2, 2, 1, 1, ...], // Ground
-    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, ...]  // More ground
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [0, 0, 0, 0, 0, 3, 3, 3, 0, 0 ], // A platform
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
+    [1, 1, 2, 2, 2, 2, 2, 2, 1, 1], // Ground
+    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]  // More ground
 ];
 export function handleTilemapCollisions(entity) {
     // --- (X-axis collision handling would go here first) ---

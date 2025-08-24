@@ -27,8 +27,6 @@
         }
         .game-wrapper {
             overflow: hidden;
-            min-width: 408px;
-            min-height: 718px;
             width: 100vw;
             /* Take full viewport width */
             height: 100vh;
@@ -36,7 +34,7 @@
             display: flex;
             /* Optional: padding around the game area */
             padding-left: 5px;
-            background-color: #444;
+            background-color: #000000;
             /* Optional: color for the game area */
         }
         .game-aspect-ratio-box {
@@ -63,7 +61,7 @@
             border-style: solid;
             border-color: #1e8339;
             border-width: 3px;
-            background-color: #444;
+            background-color: #000000;
         }
 
         #gameArea text {
@@ -513,7 +511,7 @@
 <body>
 
     <div id="gameWrapper" class="game-wrapper">
-        <canvas id="gameArea" width="404" height="718"></canvas>
+        <canvas id="gameArea" ></canvas>
     </div>
           <!-- Pause/Stop Button Overlay (directly inside game-wrapper) -->
         <div id="gameControlsOverlay" class="game-controls-overlay">
@@ -587,11 +585,6 @@
                 <button id="resetSettingsButton" class="settings-action-button reset-button">Reset</button>
             </div>
         </div>
-    </div>
-
-
-    
-    </div>
     </div>
     <!--load in sounds before script-->>
     <audio id="gameOverSound" src="/sounds/gameOver.wav"></audio>

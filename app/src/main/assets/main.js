@@ -12,9 +12,6 @@ const svgNS = "http://www.w3.org/2000/svg";
         let newcomplextext = '  <text\n    id=\"__TEXTID__\"\n    x=\"50\"\n    y=\"25\"\n    font-family=\"Verdana\"\n    font-weight=\"bold\"\n    font-size=\"6\" \n    fill=\"black\"\n    text-anchor=\"middle\"\n    dominant-baseline=\"middle\"\n    lengthAdjust=\"spacingAndGlyphs\"\n    text-rendering=\"optimizeLegibility\"\n    textLength=\"90\">I need help on problem one, replace the values please, and explain, I\'m confused. (Supply problem 1)</text>';
 */
 
-        // --- IMPORTANT: Get dimensions from viewBox ---
-        //let gameAreaViewBoxWidth = 404; // Default if viewBox not readable
-        //let gameAreaViewBoxHeight = 718; // Default
         let gamePaused = false;
         let gameStopped = true; // New flag to track if the game is fully stopped
         let timeWhenPauseActuallyStarted = 0;
@@ -181,8 +178,8 @@ const svgNS = "http://www.w3.org/2000/svg";
         // For this example, we'll set them directly in JS,
         // but you might want to get them from the canvas element's attributes
         // if they are set in HTML (e.g., canvas.width = canvas.getAttribute('width');)
-        canvas.width = 404; // Default width, same as your old SVG viewBox
-        canvas.height = 718; // Default height, same as your old SVG viewBox
+        canvas.width = 720; // Default width, same as your old SVG viewBox
+        canvas.height = 1280; // Default height, same as your old SVG viewBox
 
         let gameAreaViewBoxWidth = canvas.width;
         let gameAreaViewBoxHeight = canvas.height;
@@ -732,7 +729,11 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
         if (spriteSheetLoaded) {
             //spawnAnimatedSprite(); // Spawns with "default_fall" animation at random X, top Y
             // CORRECT - passing an object for direction
-            spawnChefKetchupWalking(100, 100, { x: 1, y: 0 });
+
+            // To make Chef half his original sprite sheet size IN THE GAME WORLD:
+            const chefScale = 1.0;//hit detection will be that of 1.0 .. only use scale for effects!
+            spawnChefKetchupWalking(100, 100, { x: 1, y: 0 }, chefScale);
+            // spawnAnimatedSprite("cheff_ketchup_walk", x, y, { scale: 0.5, entityType: 'enemy_chef_ketchup', ... });
         }
 
     }
@@ -820,6 +821,7 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
         }
 
         function initializeGame() {
+            resizeCanvasAndCalculateScale();
             loadSettings(); // Load settings from localStorage
             loadProgress(); // Load progress from localStorage
             // Clear array
@@ -984,15 +986,16 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
         handleOrientationChange();
     }
 
-    function showAndroidToast() {
+    function showAndroidToast(message) {
         if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
             // We are likely in the Android WebView with the bridge
-            var message = "Hello from JavaScript! 👋";
+
             AndroidBridge.showToast(message);
             console.log("Called AndroidBridge.showToast('" + message + "')");
         } else {
             // We are likely NOT in the Android WebView, or bridge isn't ready
-            console.warn("AndroidBridge is not defined. Toast functionality skipped.");
+            //console.warn("AndroidBridge is not defined. Toast functionality skipped.");
+            console.log(message);
             // Optionally, provide a fallback or do nothing silently:
             // alert("Toast feature is only available in the app.");
         }
@@ -1091,6 +1094,7 @@ let allAssetsLoaded = false; // Or a more specific flag like masterSheetLoaded
 // const activeGameElements = []; // You already have this
 
 function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY, customProps = {}) {
+    // ... (existing code) ...
     if (!spriteSheetLoaded || !spriteSheetImage) {
         console.warn("Sprite sheet not loaded yet. Cannot spawn sprite.");
         return;
@@ -1108,48 +1112,36 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
 
     // --- This is the part you're focusing on ---
     const firstFrameData = animData.frames[0]; // Get data for the VERY FIRST frame of this animation
+    const entityScale = customProps.scale || 1.0; // Default to 1 (no change)
 
     const newSprite = {
-        type: 'sprite',
-        image: spriteSheetImage, // Assuming one master sheet for now.
-        // Could also be: loadedSpriteSheets[animData.sheet] if you support multiple sheets.
-        x: initialX !== undefined ? initialX : Math.random() * (canvas.width - firstFrameData.sWidth), // Use first frame's width for default positioning
-        y: initialY !== undefined ? initialY : -firstFrameData.sHeight,      // Use first frame's height for default positioning
+        type: 'sprite', // <--- ***** ADD THIS LINE *****
+        // ... (other properties) ...
+        image: spriteSheetImage,
+        x: initialX !== undefined ? initialX : Math.random() * (canvas.width - (firstFrameData.sWidth * entityScale)),
+        y: initialY !== undefined ? initialY : -(firstFrameData.sHeight * entityScale),
 
         // --- Animation Properties from the new structure ---
         animationName: animationName,
-        currentFrameIndex: 0, // NEW: Index into the animData.frames array. Replaces 'currentFrameInAnimation'.
-        totalFramesInAnimation: animData.frames.length, // NEW: Calculated from the number of defined frames.
-        animationLoop: animData.loop !== undefined ? animData.loop : true, // Get loop status from animation's top level.
+        currentFrameIndex: 0,
+        totalFramesInAnimation: animData.frames.length,
+        animationLoop: animData.loop !== undefined ? animData.loop : true,
 
-        // Display dimensions on the canvas. These can change if frames have different sizes.
-        // Initialize with the dimensions of the first frame.
-        width: firstFrameData.sWidth,   // Display width on canvas, from the specific frame data.
-        height: firstFrameData.sHeight, // Display height on canvas, from the specific frame data.
+        // DIMENSIONS IN NATIVE GAME WORLD
+        // These are now scaled by entityScale
+        width: firstFrameData.sWidth * entityScale,
+        height: firstFrameData.sHeight * entityScale,
+        spriteScale: entityScale, // Store the scale for potential future use or dynamic changes
 
-        // Timing for the current frame.
-        // Get initial animation speed from the first frame's duration, or the animation's default speed.
-        currentFrameDuration: firstFrameData.duration || animData.defaultAnimationSpeed || 100, // Fallback if no durations defined.
-        lastFrameTime: 0, // This remains the same: timestamp of when the current frame started displaying.
-
-        // --- End of the new animation properties ---
-
-        speed: customProps.speed || 50, // Movement speed (separate from animation speed)
-        direction: customProps.direction || { x: 0, y: 0 }, // Movement direction
-
-        ...customProps // Spread other custom properties (like entityType, health)
+        currentFrameDuration: firstFrameData.duration || animData.defaultAnimationSpeed || 100,
+        lastFrameTime: 0,
+        // ... (other properties like speed, direction) ...
+        ...customProps
     };
-
-    // Properties no longer directly needed on the sprite object from the old system:
-    // - frameWidth (now derived from currentFrameData.sWidth via element.width)
-    // - frameHeight (now derived from currentFrameData.sHeight via element.height)
-    // - startFrameOnSheet (no longer relevant as each frame has its own sx, sy)
-    // - animationSpeed (replaced by currentFrameDuration)
-
     activeGameElements.push(newSprite);
-    console.log(`Spawned ADVANCED sprite "${animationName}":`, newSprite);
     return newSprite;
 }
+
 
 
 
@@ -1171,16 +1163,17 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
 let chefKetchup; // Variable to hold our Chef Ketchup sprite instance
 
 // Option A: A new function specific for spawning Chef Ketchup with a direction
-function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }) { // Default to walking right
-    console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection);
+// Option A: A new function specific for spawning Chef Ketchup with a direction AND SCALE
+function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desiredScale = 1.0) { // Added desiredScale, default to 1.0
+    console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
 
     const customChefProps = {
         entityType: 'enemy_chef_ketchup',
         health: 100,
-        direction: movementDirection, // Pass the desired direction here
-        speed: 5 // Example: Give Chef Ketchup a specific speed when walking
-
-        // ... any other properties specific to this character
+        direction: movementDirection,
+        speed: 50, // You had 5 here before, ensure it's a reasonable speed
+        scale: desiredScale // **** THIS IS THE IMPORTANT PART ****
+        // Pass the desiredScale to spawnAnimatedSprite
     };
 
     // Spawn him in his walk-state (make sure "cheff_ketchup_walk" is defined in ANIMATIONS)
@@ -1188,11 +1181,15 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }) { // 
 
     if (chefKetchup) {
         console.log("Chef Ketchup spawned walking!", chefKetchup);
+        // You can also log the actual scale that got applied if spawnAnimatedSprite returns the object
+        // console.log("Chef's actual scale after spawn:", chefKetchup.spriteScale);
+        // Or if spawnAnimatedSprite modifies customChefProps, check there.
     } else {
         console.error("Failed to spawn Chef Ketchup for walking.");
     }
     return chefKetchup; // Return the instance if needed
 }
+
 
 // Option B: Modifying an existing spawnChefKetchup if you prefer
 // function spawnChefKetchup(x, y, initialAnimation = "cheff_ketchup_idle", customOverrides = {}) {
@@ -1235,121 +1232,154 @@ function spawnTestRectangle() {
     activeGameElements.push(newRect);
     console.log("Spawned test rectangle:", newRect);
 }
-
+const LETTERBOX_COLOR = "#333333";
 function drawGameElements(ctx) {
+
+    // 1. CLEAR THE ENTIRE CANVAS WITH THE LETTERBOX COLOR
+    // This ensures that areas outside your scaled game world (the letterbox/pillarbox bars)
+    // are filled with this color.
+    ctx.fillStyle = LETTERBOX_COLOR;
+    ctx.fillRect(0, 0, canvas.width, canvas.height); // Use actual canvas.width and canvas.height
+
+    // 2. SAVE THE CURRENT CANVAS STATE (OPTIONAL BUT GOOD PRACTICE)
+    // Not strictly necessary just for this color change, but good if you do other global
+    // canvas state changes before the game world transforms.
+    ctx.save(); // You might already have a save/restore pair for transforms
+
+
+    // 4. APPLY MAIN SCENE TRANSFORMATIONS (ONCE PER FRAME)
+    // These transformations will apply to ALL game elements drawn subsequently.
+    ctx.save(); // Save the clean state before any scene transforms
+    ctx.translate(currentOffsetX, currentOffsetY);
+    ctx.scale(currentScale, currentScale); // Uniform scale for the whole scene
+
+    // 5. LOOP THROUGH AND DRAW EACH GAME ELEMENT (USING NATIVE COORDINATES)
     activeGameElements.forEach(element => {
+        // OPTIONAL: Save/restore around each element if an element needs
+        // its OWN specific transformations (like rotation) that shouldn't affect others.
+        // For simple translation/scaling handled by the main transform, this isn't strictly needed
+        // but can be good practice if elements get more complex.
+        // ctx.save(); // Element-specific save
+       // if(element.type === 'sprite')console.log("Drawing element:", element.type, element.x, element.y, element.width, element.height);
         if (element.type === 'rectangle') {
-            ctx.fillStyle = element.color || 'gray';
+            ctx.fillStyle = element.color || 'gray'; // Set color for this rectangle
+            // element.x, y, width, height are NATIVE game world coordinates/sizes
             ctx.fillRect(element.x, element.y, element.width, element.height);
         } else if (element.type === 'sprite' && element.image && element.animationName) {
-            // --- NEW DRAWING LOGIC FOR ADVANCED ANIMATION SYSTEM ---
             const animDef = ANIMATIONS[element.animationName];
-
             if (!animDef || !animDef.frames || animDef.frames.length === 0) {
-                if(gameStateLogs ===true)console.warn(`Draw: Animation data or frames missing for "${element.animationName}" on element:`, element);
-                return; // Cannot draw if definition is missing
+                // ... (your warning logs) ...
+                return; // or continue to next element
             }
 
-            // Ensure currentFrameIndex is valid
-            if (element.currentFrameIndex === undefined || element.currentFrameIndex < 0 || element.currentFrameIndex >= animDef.frames.length) {
-                if(gameStateLogs ===true)console.warn(`Draw: Invalid currentFrameIndex (${element.currentFrameIndex}) for "${element.animationName}". Defaulting to 0. Element:`, element);
-                element.currentFrameIndex = 0; // Fallback or handle error
-            }
-
+            // ... (your frame index validation) ...
             const frameDef = animDef.frames[element.currentFrameIndex];
-
             if (!frameDef) {
-                if(gameStateLogs ===true)console.warn(`Draw: Frame definition missing for index ${element.currentFrameIndex} in "${element.animationName}". Element:`, element);
-                return; // Cannot draw if specific frame data is missing
+                // ... (your warning logs) ...
+                return; // or continue to next element
             }
 
-            // Get source coordinates and dimensions directly from the frame definition
             const sx = frameDef.sx;
             const sy = frameDef.sy;
-            const sWidth = frameDef.sWidth;   // Source width from this specific frame
-            const sHeight = frameDef.sHeight; // Source height from this specific frame
+            const sWidth = frameDef.sWidth;
+            const sHeight = frameDef.sHeight;
 
-            // Destination coordinates and dimensions
+            // element.x, y, width, height are NATIVE game world coordinates/sizes
             const dx = element.x;
             const dy = element.y;
-            // element.width and element.height on the sprite object should be updated
-            // by updateGameElements to match the current frame's sWidth/sHeight
-            // if you want 1:1 pixel drawing without scaling.
-            const dWidth = element.width;
-            const dHeight = element.height;
 
-            // Your new logging section (similar to what you had but using correct vars)
-            if(gameStateLogs ===true)console.log(`DRAWING SPRITE: ${element.animationName} (Frame Index: ${element.currentFrameIndex}) Image:`, element.image);
-            if(gameStateLogs ===true)console.log(`  Source Coords (sx, sy): ${sx}, ${sy}`);
-            if(gameStateLogs ===true)console.log(`  Source Dimensions (sWidth, sHeight): ${sWidth}, ${sHeight}`);
-            if(gameStateLogs ===true)console.log(`  Dest Coords (dx, dy): ${dx}, ${dy}`);
-            if(gameStateLogs ===true)console.log(`  Dest Dimensions (dWidth, dHeight): ${dWidth}, ${dHeight}`);
-            if(gameStateLogs ===true)console.log(`  Frame Definition Used:`, frameDef);
+            // RECALCULATE dWidth and dHeight based on CURRENT frame's sWidth/sHeight and the element's persistent scale
+            const dWidth = sWidth * element.spriteScale;   // Use current frame's sWidth
+            const dHeight = sHeight * element.spriteScale; // Use current frame's sHeight
 
-
-            if (typeof sx !== 'number' || typeof sy !== 'number' || typeof sWidth !== 'number' || typeof sHeight !== 'number' ||
-            typeof dx !== 'number' || typeof dy !== 'number' || typeof dWidth !== 'number' || typeof dHeight !== 'number' ||
-            sWidth <= 0 || sHeight <= 0 || dWidth <= 0 || dHeight <= 0 ) { // Added more checks
-                if(gameStateLogs ===true)console.error("DRAW IMAGE ABORTED: Invalid parameters for drawImage.", {sx,sy,sWidth,sHeight,dx,dy,dWidth,dHeight});
-                return;
+            if (sWidth > 0 && sHeight > 0 && dWidth > 0 && dHeight > 0) {
+                try {
+                    // The element.image, sx, sy, sWidth, sHeight are from the current animation frame
+                    // The dx, dy are the element's game world position
+                    // The dWidth, dHeight are now scaled dimensions of the CURRENT source frame
+                    ctx.drawImage(element.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+                } catch (e) {
+                    console.error("Error drawing sprite:", element.animationName, e);
+                }
+            } else {
+                // console.warn("Skipping drawImage due to zero/negative dimension for sprite:", element.animationName);
             }
+            // ... (your validation for drawImage parameters) ...
 
-            try {
-                ctx.drawImage(
-                    element.image,
-                    sx,       // From frameDef
-                    sy,       // From frameDef
-                    sWidth,   // From frameDef
-                    sHeight,  // From frameDef
-                    dx,       // element.x
-                    dy,       // element.y
-                    dWidth,   // element.width (should match sWidth from currentFrameDef for no scaling)
-                    dHeight   // element.height (should match sHeight from currentFrameDef for no scaling)
-                );
-            } catch (e) {
-                console.error("Error during ctx.drawImage:", e);
-                console.error("Parameters were:", { image: element.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight });
-            }
+
         }
+        // if (element.type === 'sprite' || element.type === 'rectangle') { // If you had an element-specific save
+        //     ctx.restore(); // Element-specific restore
+        // }
     });
+
+    // 6. RESTORE FROM MAIN SCENE TRANSFORMATIONS
+    ctx.restore(); // Restores state to before scene translate/scale
+
+    // 7. (Optional) Draw screen-space UI elements here, after restoring.
+    // These will not be affected by the game world's scale/offset.
 }
 
 
 
-// Function to handle resizing the canvas
-function resizeGameCanvas() {
-    // Set the canvas's internal drawing resolution to match the window's viewport size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+// At the start or in your resize handler:
+let nativeGameWidth = 1280; // Your chosen native landscape width
+let nativeGameHeight = 720; // Your chosen native landscape height
+let nativeGameAspectRatio = nativeGameWidth / nativeGameHeight;
+
+let currentScale = 1;
+let currentOffsetX = 0;
+let currentOffsetY = 0;
+
+function resizeCanvasAndCalculateScale() {
+    // Set the drawing surface dimensions
+    canvas.width = window.innerWidth;  // e.g., 923
+    canvas.height = window.innerHeight; // e.g., 363
+    showAndroidToast(`Canvas attributes set to W=${canvas.width}, H=${canvas.height}`);
+
+    // IMPORTANT: Ensure CSS display size matches attribute size
+    // to prevent browser stretching.
+    canvas.style.width = canvas.width + 'px';
+    canvas.style.height = canvas.height + 'px';
+    // (Or use CSS to make the canvas fill its container, and then set
+    // canvas.width/height to container.clientWidth/clientHeight)
+
+    // ... rest of your scaling calculations for currentScale, currentOffsetX, currentOffsetY ...
+    // These calculations will now use the 923x363 dimensions.
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    showAndroidToast(`PHONE_SCALE_DEBUG: Canvas W=${canvas.width}, H=${canvas.height}`)
+    let screenAspectRatio = canvas.width / canvas.height;
+
+    console.log(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${nativeGameAspectRatio}`);
 
 
-
-
-
-    // Your CSS for #gameArea (max-width: 100%, max-height: 100%, etc.)
-    // will then scale the visual display of this canvas element to fit its container.
-    // If the canvas's container (e.g., the <body>) is set up to be full screen,
-    // the canvas will effectively fill the screen.
-
-    console.log(`Canvas drawing surface resized to: ${canvas.width}x${canvas.height}`);
-
-    // Note: Resetting canvas.width or .height clears the canvas and its context.
-    // If you have specific context settings you apply once (e.g., ctx.imageSmoothingEnabled = false),
-    // you might need to re-apply them here, or ensure they are set in each draw call if necessary.
-
-    // If your game elements need explicit repositioning based on the new canvas size
-    // (beyond what using canvas.width/height in their logic already provides),
-    // you would call a function here to do that.
-    // e.g., adjustElementPositionsAfterResize();
+    if (screenAspectRatio > nativeGameAspectRatio) {
+        // Screen is WIDER than the game's native aspect ratio (pillarbox)
+        // Scale is based on height
+        currentScale = canvas.height / nativeGameHeight;
+        currentOffsetX = (canvas.width - (nativeGameWidth * currentScale)) / 2;
+        currentOffsetY = 0;
+        showAndroidToast(`PHONE_SCALE_DEBUG: Pillarbox. Scale by H. currentScale=${currentScale}`);
+    } else {
+        // Screen is TALLER/NARROWER than the game's native aspect ratio (letterbox)
+        // Scale is based on width
+        currentScale = canvas.width / nativeGameWidth;
+        currentOffsetX = 0;
+        currentOffsetY = (canvas.height - (nativeGameHeight * currentScale)) / 2;
+        showAndroidToast(`PHONE_SCALE_DEBUG: Letterbox. Scale by W. currentScale=${currentScale}`);
+    }
+    console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${currentScale}, cOffsetX=${currentOffsetX}, cOffsetY=${currentOffsetY}`);
 }
+
 
 // Ensure 'canvas' is defined (e.g., const canvas = document.getElementById('gameArea');)
 if (canvas) {
     // Call it once an initial page load to set the size correctly from the start
-    resizeGameCanvas();
+    resizeCanvasAndCalculateScale();
 
-    // Add an event listener to call resizeGameCanvas whenever the window is resized
-    window.addEventListener('resize', resizeGameCanvas);
+    // Add an event listener to call resizeCanvasAndCalculateScale whenever the window is resized
+    window.addEventListener('resize', resizeCanvasAndCalculateScale);
 } else {
     console.error("Canvas element not found when trying to set up resize handling.");
 }
@@ -1433,8 +1463,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             // Option 2: Define the designed dimensions
-            const NATIVE_SVG_WIDTH = 408; // The width your SVG was designed at
-            const NATIVE_SVG_HEIGHT = 718; // The height your SVG was designed at
+            const NATIVE_SVG_WIDTH = 1280; // The width your SVG was designed at
+            const NATIVE_SVG_HEIGHT = 720; // The height your SVG was designed at
             const PADDING_VALUE = 5; // 5px padding top and bottom
 /*            if (liveGameArea) { // Make sure liveGameArea (your SVG element) exists
                 fitSvgToScreenWithPadding(liveGameArea, NATIVE_SVG_WIDTH, NATIVE_SVG_HEIGHT), PADDING_VALUE;
@@ -1473,7 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             initOrientationDetection(); // Initialize orientation detection
             vibrateDevicePattern();
-            resizeGameCanvas();
+            resizeCanvasAndCalculateScale();
             // Load assets then start
             //SPRITE_SHEET_SRC
             loadSpriteSheet(() => {
