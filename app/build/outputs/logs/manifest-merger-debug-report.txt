@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-30:12
-INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-30:12
-INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-30:12
-INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-30:12
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-31:12
+INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-31:12
+INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-31:12
+INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:2:1-31:12
 MERGED from [com.google.accompanist:accompanist-webview:0.34.0] C:\Users\prospet0\.gradle\caches\transforms-4\2fa2c82f830df3ad5ea45b7f61e07af2\transformed\accompanist-webview-0.34.0\AndroidManifest.xml:17:1-23:12
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\prospet0\.gradle\caches\transforms-4\12a039bb49a3b072abc92fd2e42037ab\transformed\material-1.12.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\prospet0\.gradle\caches\transforms-4\2c9428a6bd38cd83c4abe5afd45611c9\transformed\constraintlayout-2.0.1\AndroidManifest.xml:2:1-11:12
@@ -126,8 +126,8 @@ ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\
 	android:name
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:5:22-63
 application
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:7:5-28:19
-INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:7:5-28:19
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:7:5-29:19
+INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:7:5-29:19
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\prospet0\.gradle\caches\transforms-4\12a039bb49a3b072abc92fd2e42037ab\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.12.0] C:\Users\prospet0\.gradle\caches\transforms-4\12a039bb49a3b072abc92fd2e42037ab\transformed\material-1.12.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] C:\Users\prospet0\.gradle\caches\transforms-4\2c9428a6bd38cd83c4abe5afd45611c9\transformed\constraintlayout-2.0.1\AndroidManifest.xml:9:5-20
@@ -199,25 +199,27 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\prospet0\.gradle\c
 	android:dataExtractionRules
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:9:9-65
 activity#com.kapcode.ComposeBrowserTemplate.MainActivity
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:17:9-27:20
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:17:9-28:20
+	android:screenOrientation
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:21:13-51
 	android:label
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:20:13-45
 	android:exported
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:19:13-36
 	android:theme
-		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:21:13-64
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:22:13-64
 	android:name
 		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:18:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:22:13-26:29
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:23:13-27:29
 action#android.intent.action.MAIN
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:23:17-69
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:24:17-69
 	android:name
-		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:23:25-66
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:24:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:25:17-77
+ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:26:17-77
 	android:name
-		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:25:27-74
+		ADDED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml:26:27-74
 uses-sdk
 INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\prospet0\AndroidStudioProjects\Compose-Browser-Template\app\src\main\AndroidManifest.xml

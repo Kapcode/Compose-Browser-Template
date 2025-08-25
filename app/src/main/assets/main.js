@@ -150,15 +150,15 @@ const svgNS = "http://www.w3.org/2000/svg";
                 console.warn(`Element with ID ${elementId} not found on the screen.`);
             }
         }
-        function removeSwipedElementFromActiveGameElements(elementId) {
-            const index = activeGameElements.findIndex(el => el.element.id === elementId);
-            if (index !== -1) {
-                activeGameElements.splice(index, 1);
-                console.log(`Removed element with ID ${elementId} from activeGameElements.`);
-            } else {
-                console.warn(`Element with ID ${elementId} not found in activeGameElements.`);
+            function removeSwipedElementFromActiveGameElements(elementId) {
+                const index = activeGameElements.findIndex(el => el.element.id === elementId);
+                if (index !== -1) {
+                    activeGameElements.splice(index, 1);
+                    console.log(`Removed element with ID ${elementId} from activeGameElements.`);
+                } else {
+                    console.warn(`Element with ID ${elementId} not found in activeGameElements.`);
+                }
             }
-        }
 
         // --- Game Initialization ---
 
@@ -534,72 +534,153 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
 // --- Inside your main game loop's update logic (e.g., updateGameObjects(deltaTime)) ---
 // --- Inside your main game loop's update logic (e.g., updateGameObjects(deltaTime)) ---
 function updateGameElements(deltaTime, currentTime) { // deltaTime is in seconds, currentTime in ms
+    // It's often safer to iterate backwards or filter to a new array when removing items
+    // For simplicity here, if you're not removing many items per frame, forEach can be okay,
+    // but be aware of potential issues if you splice() directly while iterating with forEach.
+    // A common robust way is to mark for removal and then filter.
+
+    let elementsToKeep = []; // We can build a new array of elements to keep
+
     activeGameElements.forEach(element => {
-        // Movement logic (you likely already have this)
-        if (element.direction && element.speed) { // Check for speed too
+        let isElementActive = true; // Assume active, set to false if it needs to be removed
+
+        // ---- Chef Patrolling Logic (Your existing code - seems fine for its purpose) ----
+        if (element.entityType === 'enemy_chef_ketchup_patrol' || element.entityType === 'enemy_chef_ketchup_autowalk') {
+            // ... (your chef movement, boundary check, and facing direction logic)
+            // This part updates element.x and element.direction.x for chefs
+            // 1. Apply current movement
             element.x += element.direction.x * element.speed * deltaTime;
+
+            // 2. Boundary Check and Direction Change
+            let reversedDirection = false;
+            const currentFrameDef = ANIMATIONS[element.animationName].frames[element.currentFrameIndex];
+            const currentDrawWidth = currentFrameDef.sWidth * element.spriteScale;
+
+            if (element.direction.x > 0 && (element.x + currentDrawWidth) >= nativeGameWidth) {
+                element.x = nativeGameWidth - currentDrawWidth;
+                element.direction.x = -1;
+                reversedDirection = true;
+                // console.log("Chef hit right wall, turning left. X:", element.x.toFixed(2));
+            } else if (element.direction.x < 0 && element.x <= 0) {
+                element.x = 0;
+                element.direction.x = 1;
+                reversedDirection = true;
+                // console.log("Chef hit left wall, turning right. X:", element.x.toFixed(2));
+            }
+
+            // 3. Update Facing Direction
+            // This is where element.facingDirection gets set
+            if (reversedDirection) {
+                if (element.direction.x > 0) {
+                    element.facingDirection = 1; // Face right
+                } else if (element.direction.x < 0) {
+                    element.facingDirection = -1; // Face left
+                }
+                // console.log("Chef new facingDirection:", element.facingDirection);
+            }
+
+        }
+
+        // ---- Generic Movement Logic (Your existing code) ----
+        // This will also apply to rectangles if they have speed and direction
+        if (element.direction && typeof element.speed === 'number') { // Check typeof speed
+            // Note: Chef's X is already updated above, so this might double-apply X movement
+            // if chefs also fall into this generic block. Consider an else if or more specific conditions.
+            // For now, let's assume chef's X is handled, and this is for Y or other entities.
+            if (!(element.entityType === 'enemy_chef_ketchup_patrol' || element.entityType === 'enemy_chef_ketchup_autowalk')) {
+                element.x += element.direction.x * element.speed * deltaTime; // Only if not chef
+            }
             element.y += element.direction.y * element.speed * deltaTime;
         }
 
-        // Animation logic for sprites
-        if (element.type === 'sprite' && element.animationName) { // Check for animationName
-            const animData = ANIMATIONS[element.animationName]; // Get current animation's general data (like speed, loop)
+        // ---- FALLING RECTANGLE SPECIFIC LOGIC ----
+        if (element.type === 'rectangle') {
+            // The generic movement above already handles element.y += ...
+            // Now, check if it should be despawned (i.e., set as inactive)
+            if (element.y > nativeGameHeight) { // Top edge of rect passed bottom of native game world
+                console.log(`Rectangle y=${element.y.toFixed(2)} passed nativeGameHeight=${nativeGameHeight}. Marking for removal.`);
+                isElementActive = false; // Mark for removal
+            }
+        }
+        // ---- END OF FALLING RECTANGLE SPECIFIC LOGIC ----
+
+
+        // ---- Animation Logic (Your existing code - seems mostly fine for animation updates) ----
+        if (element.type === 'sprite' && element.animationName) {
+            const animData = ANIMATIONS[element.animationName];
             if (!animData) {
                 console.warn(`Missing animData for ${element.animationName} during update.`);
-                return; // Skip animation if data is missing
-            }
-        }
-        // ***** ADD THIS LINE *****
-        if (element.lastFrameTime === undefined || element.lastFrameTime === 0) { // Check if it's undefined or explicitly 0 from spawn
-            element.lastFrameTime = currentTime;
-        }
-        // Boundary checks, etc.
-        // Inside updateGameElements animation logic
-        // ...
-        if (currentTime - element.lastFrameTime >= element.currentFrameDuration) {
-            element.currentFrameIndex++;
-            const animDef = ANIMATIONS[element.animationName]; // Get the full animation definition
+                // return; // Using 'continue' equivalent by adding to elementsToKeep or not
+            } else { // Only proceed if animData exists
+                if (element.lastFrameTime === undefined || element.lastFrameTime === 0) {
+                    element.lastFrameTime = currentTime;
+                }
 
-            if (element.currentFrameIndex >= element.totalFramesInAnimation) {
-                if (element.animationLoop) {
-                    element.currentFrameIndex = 0;
-                } else {
-                    element.currentFrameIndex = element.totalFramesInAnimation - 1; // Stay on last frame
-                    const lastFrameDef = animDef.frames[element.currentFrameIndex];
-                    if (lastFrameDef.onEnd === "switchToIdle") { // Example onEnd handling
-                        // Code to switch animation to "cheff_ketchup_idle"
-                        element.animationName = "cheff_ketchup_idle";
-                        // Reset animation state for the new animation:
-                        const newAnimDef = ANIMATIONS[element.animationName];
-                        element.currentFrameIndex = 0;
-                        element.totalFramesInAnimation = newAnimDef.frames.length;
-                        element.animationLoop = newAnimDef.loop;
-                        const firstFrameOfNewAnim = newAnimDef.frames[0];
-                        element.currentFrameDuration = firstFrameOfNewAnim.duration || newAnimDef.defaultAnimationSpeed;
-                        element.width = firstFrameOfNewAnim.sWidth;
-                        element.height = firstFrameOfNewAnim.sHeight;
+                if (currentTime - element.lastFrameTime >= element.currentFrameDuration) {
+                    element.currentFrameIndex++;
+                    const animDef = ANIMATIONS[element.animationName];
+
+                    if (!animDef) { // Safety check for animDef itself
+                        console.error(`Animation definition for ${element.animationName} not found!`);
+                        isElementActive = false; // Or handle differently
+                    } else if (element.currentFrameIndex >= element.totalFramesInAnimation) {
+                        if (element.animationLoop) {
+                            element.currentFrameIndex = 0;
+                        } else {
+                            element.currentFrameIndex = element.totalFramesInAnimation - 1;
+                            const lastFrameDef = animDef.frames[element.currentFrameIndex];
+                            if (lastFrameDef && lastFrameDef.onEnd === "switchToIdle") { // Check lastFrameDef
+                                element.animationName = "cheff_ketchup_idle";
+                                const newAnimDef = ANIMATIONS[element.animationName];
+                                if (newAnimDef) { // Check newAnimDef
+                                    element.currentFrameIndex = 0;
+                                    element.totalFramesInAnimation = newAnimDef.frames.length;
+                                    element.animationLoop = newAnimDef.loop;
+                                    const firstFrameOfNewAnim = newAnimDef.frames[0];
+                                    if (firstFrameOfNewAnim) { // Check firstFrameOfNewAnim
+                                        element.currentFrameDuration = firstFrameOfNewAnim.duration || newAnimDef.defaultAnimationSpeed;
+                                        element.width = firstFrameOfNewAnim.sWidth;
+                                        element.height = firstFrameOfNewAnim.sHeight;
+                                    } else {
+                                        console.error("New idle animation has no first frame!");
+                                        isElementActive = false;
+                                    }
+                                } else {
+                                    console.error("Idle animation definition not found!");
+                                    isElementActive = false;
+                                }
+                            }
+                        }
                     }
-                    // ... other onEnd logic
+
+                    // Re-fetch animDef in case it changed (e.g., switchToIdle)
+                    const currentAnimDefForFrameUpdate = ANIMATIONS[element.animationName];
+                    if (currentAnimDefForFrameUpdate && currentAnimDefForFrameUpdate.frames) { // Check again
+                        const currentFrameDef = currentAnimDefForFrameUpdate.frames[element.currentFrameIndex];
+                        if (!currentFrameDef) {
+                            console.error(`Inconsistent animation state: No frameDef for ${element.animationName} at index ${element.currentFrameIndex}`);
+                            isElementActive = false; // Mark for removal or handle error
+                        } else {
+                            element.currentFrameDuration = currentFrameDef.duration || currentAnimDefForFrameUpdate.defaultAnimationSpeed;
+                            element.width = currentFrameDef.sWidth;
+                            element.height = currentFrameDef.sHeight;
+                            element.lastFrameTime = currentTime;
+                        }
+                    } else {
+                        console.error(`Animation frames not found for ${element.animationName} after potential switch.`);
+                        isElementActive = false;
+                    }
                 }
             }
+        } // End of animation logic
 
-            const currentFrameDef = animDef.frames[element.currentFrameIndex];
-
-            // ***** ADD THIS SAFETY CHECK *****
-            if (!currentFrameDef) {
-                console.error(`Inconsistent animation state: No frameDef for ${element.animationName} at index ${element.currentFrameIndex}`);
-                return; // or handle error appropriately
-            }
-            // ********************************
-
-            element.currentFrameDuration = currentFrameDef.duration || animDef.defaultAnimationSpeed;
-            element.width = currentFrameDef.sWidth;   // Update width for drawing
-            element.height = currentFrameDef.sHeight; // Update height for drawing
-            element.lastFrameTime = currentTime;
+        if (isElementActive) {
+            elementsToKeep.push(element);
         }
-        // ...
 
-    });
+    }); // End of forEach loop
+
+    activeGameElements = elementsToKeep; // Replace with the filtered list
 }
 
 
@@ -732,7 +813,8 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
 
             // To make Chef half his original sprite sheet size IN THE GAME WORLD:
             const chefScale = 1.0;//hit detection will be that of 1.0 .. only use scale for effects!
-            spawnChefKetchupWalking(100, 100, { x: 1, y: 0 }, chefScale);
+            //spawnChefKetchupWalking(100, 100, { x: 1, y: 0 }, chefScale);
+            spawnPatrollingChef(nativeGameHeight - 100, chefScale, 50);
             // spawnAnimatedSprite("cheff_ketchup_walk", x, y, { scale: 0.5, entityType: 'enemy_chef_ketchup', ... });
         }
 
@@ -1043,13 +1125,17 @@ const ANIMATIONS = {
         sheet: SPRITE_SHEET_SRC, // Could still be here, or even per-frame
         loop: true,              // Moved to top level of animation definition
         defaultAnimationSpeed: 300, // A fallback if a frame doesn't specify duration
+        defaultAnimationSpeed: 300, // Time per frame
+        // NEW: Define a base movement speed for this animation sequence
+        baseMovementSpeed: 50,
         frames: [
             // Frame 0 of "cheff_ketchup_walk"
-            { sx: 0,  sy: 0, sWidth: 90, sHeight: 150, duration: 300 },
+            { sx: 0,  sy: 0, sWidth: 90, sHeight: 150, duration: 50 ,speedModifier: 1},
             // Frame 1 of "cheff_ketchup_walk"
-            { sx: 100, sy: 0, sWidth: 110, sHeight: 150, duration: 300 }
+            { sx: 95, sy: 154, sWidth: 92, sHeight: 149, duration: 200 ,speedModifier: 0.2},
+            { sx: 100, sy: 0, sWidth: 110, sHeight: 150, duration: 200,speedModifier: 0.2  }//
             // If it was a 3rd frame:
-            // { sx: 140, sy: 0, sWidth: 70, sHeight: 140, duration: 300 }
+
         ]
     }
     // Add more animations here following the same structure
@@ -1166,6 +1252,9 @@ let chefKetchup; // Variable to hold our Chef Ketchup sprite instance
 // Option A: A new function specific for spawning Chef Ketchup with a direction AND SCALE
 function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desiredScale = 1.0) { // Added desiredScale, default to 1.0
     console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
+    // 1. Get the animation definition for the chef's current animation
+
+    const animDef = ANIMATIONS[chef.animationName];
 
     const customChefProps = {
         entityType: 'enemy_chef_ketchup',
@@ -1176,8 +1265,29 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
         // Pass the desiredScale to spawnAnimatedSprite
     };
 
+    // 2. Get the specific frame definition (e.g., the first frame for initial placement)
+    // It's good practice to check if the frames array exists and is not empty
+    if (!animDef.frames || animDef.frames.length === 0) {
+        console.error(`Animation "${chef.animationName}" has no frames defined! Cannot determine sHeight.`);
+        // Handle error
+        return null;
+    }
+    const currentFrameDef = animDef.frames[0]; // Or animDef.frames[chef.currentFrameIndex] if that exists
+
+    // 3. Now you can access sHeight from the frame definition object
+    const sHeight = currentFrameDef.sHeight;
+
+    if (sHeight === undefined) {
+        console.error(`sHeight is undefined for the first frame of animation "${chef.animationName}". Check ANIMATIONS object.`);
+        // Handle error or use a default
+        return null;
+    }
+
+    const dHeight = sHeight * chef.spriteScale;
+    const desiredPadding = 10;
     // Spawn him in his walk-state (make sure "cheff_ketchup_walk" is defined in ANIMATIONS)
     chefKetchup = spawnAnimatedSprite("cheff_ketchup_walk", x, y, customChefProps);
+    chef.y = nativeGameHeight - dHeight - desiredPadding;
 
     if (chefKetchup) {
         console.log("Chef Ketchup spawned walking!", chefKetchup);
@@ -1189,7 +1299,98 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
     }
     return chefKetchup; // Return the instance if needed
 }
+function spawnPatrollingChef(startY, scale = 1.0, speed = 50) {
+    // Determine spawn X (e.g., start at left edge)
+    const startX = 0; // Or some padding from the edge
 
+
+    // Initial movement direction (e.g., start moving right)
+    const initialMovementDirection = { x: 1, y: 0 };
+
+    const customChefProps = {
+        entityType: 'enemy_chef_ketchup_patrol', // Make it specific if needed
+        health: 100,
+        direction: initialMovementDirection,
+        speed: speed,
+        scale: scale,
+        facingDirection: 1, // Explicitly set initial facing direction
+        // Add patrol boundaries if you want them specific to this chef
+        // patrolMinX: 0,
+        // patrolMaxX: nativeGameWidth, // Assuming nativeGameWidth is defined
+    };
+    // Use your existing spawn function
+    let chef = spawnAnimatedSprite("cheff_ketchup_walk", startX, startY, customChefProps);
+
+
+    // 1. Get the animation definition for the chef's current animation
+    const animDef = ANIMATIONS[chef.animationName];
+
+    if (!animDef) {
+        console.error(`Animation "${chef.animationName}" not found! Cannot determine sHeight.`);
+        // Handle error: maybe return, or use a default sHeight
+        return null;
+    }
+
+    // 2. Get the specific frame definition (e.g., the first frame for initial placement)
+    // It's good practice to check if the frames array exists and is not empty
+    if (!animDef.frames || animDef.frames.length === 0) {
+        console.error(`Animation "${chef.animationName}" has no frames defined! Cannot determine sHeight.`);
+        // Handle error
+        return null;
+    }
+    const currentFrameDef = animDef.frames[0]; // Or animDef.frames[chef.currentFrameIndex] if that exists
+
+    // 3. Now you can access sHeight from the frame definition object
+    const sHeight = currentFrameDef.sHeight;
+
+    if (sHeight === undefined) {
+        console.error(`sHeight is undefined for the first frame of animation "${chef.animationName}". Check ANIMATIONS object.`);
+        // Handle error or use a default
+        return null;
+    }
+
+    const dHeight = sHeight * chef.spriteScale;
+    const desiredPadding = 10;
+
+
+    console.log(`Spawning Chef for animation "${chef.animationName}" at y=${chef.y} (sHeight=${sHeight}, dHeight=${dHeight})`);
+
+
+
+
+
+
+
+
+
+
+
+
+    chef.y = nativeGameHeight - dHeight - desiredPadding;
+    if (chef) {
+        console.log(`Patrolling Chef spawned at (${startX},${startY}), speed: ${speed}, scale: ${scale}`);
+    } else {
+        console.error("Failed to spawn Patrolling Chef.");
+    }
+    return chef;
+}
+function spawnIncompleteChef() { // Or whatever your function is named
+    let chef = {
+        // ... other properties (x, image, animationName, spriteScale: 1, etc.) ...
+        entityType: 'player_chef', // or whatever identifies him
+        // ...
+    };
+
+    // Calculate Y position
+    const animationFrame = ANIMATIONS[chef.animationName].frames[0]; // Assuming frame 0 for initial height
+    const sHeight = animationFrame.sHeight; // This should be 149 for chef
+    const dHeight = sHeight * chef.spriteScale; // 149 * 1 = 149
+
+    chef.y = nativeGameHeight - dHeight - startY; // Sets y to 561
+
+    activeGameElements.push(chef);
+    return chef;
+}
 
 // Option B: Modifying an existing spawnChefKetchup if you prefer
 // function spawnChefKetchup(x, y, initialAnimation = "cheff_ketchup_idle", customOverrides = {}) {
@@ -1208,29 +1409,23 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
 
 
 
-
-
-
-
-
-
 function spawnTestRectangle() {
-    const rectWidth = 50;
-    const rectHeight = 50;
+    const rectWidth = 50;  // Native game units
+    const rectHeight = 50; // Native game units
 
     const newRect = {
-        type: 'rectangle', // Matches the type our drawGameElements function looks for
-        x: Math.random() * (canvas.width - rectWidth), // Random initial X
-        y: -rectHeight, // Start just above the screen
+        type: 'rectangle', // Make sure this matches the check in updateGameElements
+        x: Math.random() * (nativeGameWidth - rectWidth), // Spawn within native width
+        y: -rectHeight,    // Start just above the native game screen
         width: rectWidth,
         height: rectHeight,
-        color: `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`, // Random color
-        speed: 100, // Pixels per second
-        direction: { x: 0, y: 1 } // Moving straight down
+        color: `rgb(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255})`,
+        speed: 100,        // Native units per second
+        direction: { x: 0, y: 1 }, // Moving straight down
+        // No entityType needed unless you have other special logic for them
+        // No animation properties needed
     };
-
     activeGameElements.push(newRect);
-    console.log("Spawned test rectangle:", newRect);
 }
 const LETTERBOX_COLOR = "#333333";
 function drawGameElements(ctx) {
@@ -1268,52 +1463,110 @@ function drawGameElements(ctx) {
         } else if (element.type === 'sprite' && element.image && element.animationName) {
             const animDef = ANIMATIONS[element.animationName];
             if (!animDef || !animDef.frames || animDef.frames.length === 0) {
-                // ... (your warning logs) ...
-                return; // or continue to next element
+                // console.warn(`Animation definition missing or empty for: ${element.animationName}`);
+                return;
             }
-
-            // ... (your frame index validation) ...
             const frameDef = animDef.frames[element.currentFrameIndex];
             if (!frameDef) {
-                // ... (your warning logs) ...
-                return; // or continue to next element
+                // console.warn(`Frame definition missing for: ${element.animationName} at index: ${element.currentFrameIndex}`);
+                return;
             }
 
             const sx = frameDef.sx;
             const sy = frameDef.sy;
-            const sWidth = frameDef.sWidth;
-            const sHeight = frameDef.sHeight;
+            const sWidth = frameDef.sWidth;   // Source width from sprite sheet
+            const sHeight = frameDef.sHeight; // Source height from sprite sheet
 
-            // element.x, y, width, height are NATIVE game world coordinates/sizes
-            const dx = element.x;
-            const dy = element.y;
+            const dx = element.x; // Top-left X where sprite should conceptually be in the game world
+            const dy = element.y; // Top-left Y
 
-            // RECALCULATE dWidth and dHeight based on CURRENT frame's sWidth/sHeight and the element's persistent scale
-            const dWidth = sWidth * element.spriteScale;   // Use current frame's sWidth
-            const dHeight = sHeight * element.spriteScale; // Use current frame's sHeight
+            // Calculate Destination Width/Height based on current frame's sWidth/sHeight and element's scale
+            // This handles animations with varying frame sizes correctly while respecting element.spriteScale.
+            const dWidth = sWidth * element.spriteScale;
+            const dHeight = sHeight * element.spriteScale;
 
             if (sWidth > 0 && sHeight > 0 && dWidth > 0 && dHeight > 0) {
+                ctx.save(); // Save current context state
+
+                // Translate to the CENTER of where the sprite will be drawn
+                ctx.translate(dx + dWidth / 2, dy + dHeight / 2);
+
+                // ****** THIS IS THE CRUCIAL PART FOR FLIPPING ******
+                // Scale to flip if facingDirection is -1.
+                // Assumes element.facingDirection is 1 (right/normal) or -1 (left/flipped).
+                // If element.facingDirection might be undefined, provide a default (e.g., || 1)
+                if (element.facingDirection === -1) {
+                    ctx.scale(-1, 1); // Flip horizontally
+                }
+                // No need for 'else ctx.scale(1,1)' as that's the default after a save/restore or fresh context
+                // Ensure these are defined in scope before this log block:
+                // element, frameDef (which has sHeight), currentScale, currentOffsetY, nativeGameHeight, canvas.height
+                // dWidth and dHeight should be what you pass to drawImage
+
+                if (element.entityType && element.entityType.includes('chef')) { // Optional: only log for chef
+                    const sHeightFromFrame = frameDef.sHeight; // Height of current anim frame from spritesheet
+                    // const dWidth = frameDef.sWidth * element.spriteScale; // You already have this
+                    // const dHeight = frameDef.sHeight * element.spriteScale; // You already have this
+
+                    console.log("--- Chef Draw DEBUG (Landscape Cutoff) ---");
+                    console.log("Canvas H (attr):", canvas.height); // The attribute value
+                    console.log("Viewport (window.innerHeight):", window.innerHeight);
+                    // If you have a wrapper, log its clientHeight
+                    // console.log("GameArea CSS H:", document.getElementById('gameArea').getBoundingClientRect().height);
+
+                    console.log("Global currentScale:", currentScale);
+                    console.log("Global currentOffsetY:", currentOffsetY);
+
+                    console.log("Chef element.y (native top):", element.y);
+                    console.log("Chef frameDef.sHeight (spritesheet):", sHeightFromFrame);
+                    console.log("Chef element.spriteScale:", element.spriteScale);
+                    console.log("Chef dHeight (for drawImage - native units):", dHeight); // THIS IS THE KEY "native height"
+
+                    let calculatedNativeBottom = element.y + dHeight; // Chef's bottom in native game units
+                    console.log("Chef Calculated Native Bottom (element.y + dHeight):", calculatedNativeBottom);
+                    console.log("Native Game World Height (nativeGameHeight):", nativeGameHeight);
+
+                    // Projected screen coordinates after global scale/offset
+                    let projectedScreenTopY = currentOffsetY + (element.y * currentScale);
+                    let projectedScreenHeight = dHeight * currentScale; // Chef's height on screen
+                    let projectedScreenBottomY = projectedScreenTopY + projectedScreenHeight;
+
+                    console.log("Chef Projected Screen Top Y:", projectedScreenTopY);
+                    console.log("Chef Projected Screen Height:", projectedScreenHeight);
+                    console.log("Chef Projected Screen Bottom Y:", projectedScreenBottomY);
+                    console.log("-----------------------------------------");
+                }
+
                 try {
-                    // The element.image, sx, sy, sWidth, sHeight are from the current animation frame
-                    // The dx, dy are the element's game world position
-                    // The dWidth, dHeight are now scaled dimensions of the CURRENT source frame
-                    ctx.drawImage(element.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+
+                    // Draw the image. Since the context is translated to the sprite's center
+                    // and potentially scaled (flipped), we draw relative to this new origin.
+                    // The top-left corner for drawing the image is now (-dWidth / 2, -dHeight / 2).
+                    ctx.drawImage(element.image,
+                        sx, sy, sWidth, sHeight,        // Source rectangle from sprite sheet
+                        -dWidth / 2, -dHeight / 2,      // Destination X, Y (relative to translated center)
+                        dWidth, dHeight                 // Destination W, H (scaled dimensions of current frame)
+                    );
                 } catch (e) {
                     console.error("Error drawing sprite:", element.animationName, e);
                 }
+
+                ctx.restore(); // Restore context to state before this sprite's transforms (undo translate and scale)
             } else {
-                // console.warn("Skipping drawImage due to zero/negative dimension for sprite:", element.animationName);
+                // console.warn("Skipping drawImage for sprite with zero/negative dimensions:", element.animationName);
             }
-            // ... (your validation for drawImage parameters) ...
-
-
         }
         // if (element.type === 'sprite' || element.type === 'rectangle') { // If you had an element-specific save
         //     ctx.restore(); // Element-specific restore
         // }
     });
-
+    //ctx.strokeStyle = 'red';
+    //ctx.lineWidth = 2 / currentScale; // Make line width consistent regardless of scale
+    //ctx.strokeRect(0, 0, nativeGameWidth, nativeGameHeight); // Draw border around native game area
     // 6. RESTORE FROM MAIN SCENE TRANSFORMATIONS
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2 / currentScale;
+    ctx.strokeRect(0, 0, nativeGameWidth, nativeGameHeight);
     ctx.restore(); // Restores state to before scene translate/scale
 
     // 7. (Optional) Draw screen-space UI elements here, after restoring.
@@ -1352,7 +1605,7 @@ function resizeCanvasAndCalculateScale() {
     let screenAspectRatio = canvas.width / canvas.height;
 
     console.log(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${nativeGameAspectRatio}`);
-
+    showAndroidToast(`aspect ratio: ${screenAspectRatio}`)
 
     if (screenAspectRatio > nativeGameAspectRatio) {
         // Screen is WIDER than the game's native aspect ratio (pillarbox)
@@ -1369,6 +1622,7 @@ function resizeCanvasAndCalculateScale() {
         currentOffsetY = (canvas.height - (nativeGameHeight * currentScale)) / 2;
         showAndroidToast(`PHONE_SCALE_DEBUG: Letterbox. Scale by W. currentScale=${currentScale}`);
     }
+    console.log(`nativeGameAspectRatio = ${nativeGameAspectRatio} screen aspect ratio = ${screenAspectRatio}` );
     console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${currentScale}, cOffsetX=${currentOffsetX}, cOffsetY=${currentOffsetY}`);
 }
 
@@ -1502,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             initOrientationDetection(); // Initialize orientation detection
-            vibrateDevicePattern();
+            //vibrateDevicePattern();
             resizeCanvasAndCalculateScale();
             // Load assets then start
             //SPRITE_SHEET_SRC
