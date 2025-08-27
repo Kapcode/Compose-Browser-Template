@@ -1,7 +1,7 @@
 import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagment.js';
 import { simplePickleSvgString } from './constants.js';
 import { setVolume,playPooledSound } from './audioManagment.js';
-import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagment.js';
+import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress, populateSettingsUI,addListenersForSettingsUI } from './settingsManagment.js';
 
 
         let debugDraw = false;
@@ -25,6 +25,20 @@ import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFrom
 
         const canvas = document.getElementById('gameArea');
         const ctx = canvas.getContext('2d');
+let welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
+let controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element
+let pauseButton = document.getElementById('pauseButton');
+let welcomeScreen = document.getElementById('welcomeScreenOverlay');
+let pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
+let resumeButton = document.getElementById('resumeButton');
+let startButton = document.getElementById('startGameButton');
+let quitToMenuButton = document.getElementById('quitToMenuButton'); //
+let settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
+let settingsOverlay = document.getElementById('settingsOverlay');
+let settingsButtonWelcome = document.getElementById('settingsButtonWelcome');
+let closeSettingsButton = document.getElementById('closeSettingsButton');
+let rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
+
 
         // --- Word List ---
  /*const wordListPos = [
@@ -813,20 +827,6 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
                 console.error("Welcome screen not found.");
             }
         }
-        let welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer'); // Assuming you have a container for the welcome background image
-        let controlsOverlay = document.getElementById('gameControlsOverlay'); // Assuming you have a controls overlay element
-        let pauseButton = document.getElementById('pauseButton');
-        let welcomeScreen = document.getElementById('welcomeScreenOverlay');
-        let pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
-        let resumeButton = document.getElementById('resumeButton');
-        let startButton = document.getElementById('startGameButton');
-        let quitToMenuButton = document.getElementById('quitToMenuButton'); //
-        let settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
-        let settingsOverlay = document.getElementById('settingsOverlay');
-        let closeSettingsButton = document.getElementById('closeSettingsButton')
-
-
-        const rotateMessageOverlay = document.getElementById('rotateMessageOverlay'); // Assume you have this HTML element
 
 
         /**
@@ -1697,9 +1697,11 @@ document.addEventListener('DOMContentLoaded', () => {
             welcomeScreen = document.getElementById('welcomeScreenOverlay');
             pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
             resumeButton = document.getElementById('resumeButton');
-            settingsButton = document.getElementById('settingsButtonWelcome'); // Your main game's settings button
+            settingsButton = document.getElementById('settingsButton');
+            settingsButtonWelcome = document.getElementById('settingsButtonWelcome');
             settingsOverlay = document.getElementById('settingsOverlay');
-            closeSettingsButton = document.getElementById('closeSettingsButton')
+            closeSettingsButton = document.getElementById('closeSettingsButton');
+
 
             startButton = document.getElementById('startGameButton');
 
@@ -1770,6 +1772,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }*/
 
 
+    // At the top of your script, get the element
+
+
+    // --- Event Listeners for showing/hiding ---
+    function openSettings() {
+        loadSettings(); // Load current settings values (doesn't populate UI)
+        populateSettingsUI(); // Populate UI elements with loaded settings
+        settingsOverlay.classList.add('visible'); // Use this to trigger CSS transition
+        console.log("Settings button clicked, showing settings overlay.");
+    }
+
+    if (settingsButton && settingsOverlay) {
+        settingsButton.addEventListener('click', openSettings);
+    }
+    if (settingsButtonWelcome && settingsOverlay) {
+        settingsButtonWelcome.addEventListener('click', openSettings);
+    }
+
+    if (closeSettingsButton && settingsOverlay) {
+        closeSettingsButton.addEventListener('click', () => {
+            updateSettingsFromUI(); // Reads from UI into JS settings object
+            saveSettings();       // Saves JS settings object to localStorage
+            // applyGameSettings(); // Applies settings to game (e.g., volume). Optional here if only saving.
+            settingsOverlay.classList.remove('visible'); // Hide it
+        });
+    }
 
 
             //settings button click handler
@@ -1780,7 +1808,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadSettings(); // Load current settings into UI elements
                     settingsOverlay.classList.remove('hidden');
                     // If you were using display: none; you'd do:
-                    settingsOverlay.style.display = 'flex'; // or 'block' depending on its default display
+                    populateSettingsUI();
+                    //settingsOverlay.style.display = 'flex'; // or 'block' depending on its default display
                     console.log("Settings button clicked, showing settings overlay.");
                 });
             }
@@ -1792,11 +1821,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     applyGameSettings();
                     settingsOverlay.classList.add('hidden');
                     // If you were using display: none; you'd do:
-                     settingsOverlay.style.display = 'none';
+                     //settingsOverlay.style.display = 'none';
                 });
             }
 
-
+            addListenersForSettingsUI();
             initOrientationDetection(); // Initialize orientation detection
             //vibrateDevicePattern();
             resizeCanvasAndCalculateScale();

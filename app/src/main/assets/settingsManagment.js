@@ -8,7 +8,11 @@ export function openNativeSettingsFromJS() {
     }
 }
 
-
+const soundVolumeInput = document.getElementById('soundVolume');
+const soundVolumeValueDisplay = document.getElementById('soundVolumeValue');
+const musicVolumeInput = document.getElementById('musicVolume');
+const musicVolumeValueDisplay = document.getElementById('musicVolumeValue');
+const rotationLock = document.getElementById('rotationLock');
 
 
 
@@ -19,7 +23,8 @@ export let settings = {
     soundVolume: 0.75,
     musicVolume: 0.5,
     difficulty: "normal", // "peaceful" , "easy", "normal", "hard" , "hardcore"
-    playerName: "Player1"
+    playerName: "Player1",
+    rotationLock: false
 };
 
 export function saveSettings() {
@@ -57,6 +62,9 @@ export function saveProgress() {
 export function loadSettings() {
     try {
         const storedSettings = localStorage.getItem('gameSettings');
+        const rawStoredSettings = localStorage.getItem('gameSettings');
+        console.log("RAW from localStorage on load:", rawStoredSettings); // <<< ADD THIS
+
         if (storedSettings) {
             settings = JSON.parse(storedSettings);
             console.log('Settings loaded from localStorage:', settings);
@@ -72,6 +80,8 @@ export function loadSettings() {
     }
     // Apply settings (e.g., update actual volume controls in your audio manager)
     applyGameSettings();
+    populateSettingsUI();// Populate UI with loaded settings // do this in main, or here, you choose
+    //double called, no issue here.
 }
 
 export function loadProgress() {
@@ -89,6 +99,43 @@ export function loadProgress() {
     // Update game state based on loaded progress
     applyGameProgress();
 }
+// In settingsManagment.js or your main UI script
+
+export function populateSettingsUI() {
+    if (!settings) { // 'settings' is your global settings object from settingsManagment.js
+        console.warn("populateSettingsUI: Settings object is not available.");
+        return;
+    }
+    console.log("Populating UI with current settings:", JSON.parse(JSON.stringify(settings))); // Good for debugging
+
+    const soundVolumeInput = document.getElementById('soundVolume');
+    const musicVolumeInput = document.getElementById('musicVolume');
+    const difficultySelect = document.getElementById('difficulty');
+    const playerNameInput = document.getElementById('playerName'); // Ensure this ID matches your HTML input
+
+    if (soundVolumeInput && typeof settings.soundVolume !== 'undefined') {
+        soundVolumeInput.value = settings.soundVolume;
+        // Update any visual display for the slider value too
+        const display = document.getElementById('soundVolumeValue');
+        if (display) display.textContent = Math.round(settings.soundVolume * 100) + '%';
+    }
+    if (musicVolumeInput && typeof settings.musicVolume !== 'undefined') {
+        musicVolumeInput.value = settings.musicVolume;
+        const display = document.getElementById('musicVolumeValue');
+        if (display) display.textContent = Math.round(settings.musicVolume * 100) + '%';
+    }
+    if (difficultySelect && typeof settings.difficulty !== 'undefined') {
+        difficultySelect.value = settings.difficulty;
+    }
+    if (playerNameInput && typeof settings.playerName !== 'undefined') {
+        playerNameInput.value = settings.playerName;
+    } else if (playerNameInput) {
+        playerNameInput.value = ""; // Clear it if not defined in settings, though it should be
+    }
+
+    console.log("UI population attempt finished.");
+}
+
 
 export function applyGameSettings() {
     // Example: Update your game's actual volume based on loaded settings.soundVolume
@@ -145,4 +192,39 @@ export function updateSettingsFromUI(){
     // You can also update any UI elements that display these settings .. like player name
     //const playerNameDisplay = document.getElementById('playerNameDisplay');
 
+}
+
+//run this once in DOMContentLoaded..
+export function addListenersForSettingsUI(){
+    // Add event listeners for live updates
+    if (soundVolumeInput) {
+        soundVolumeInput.addEventListener('input', () => {
+            updateVolumeDisplay(soundVolumeInput.value, soundVolumeValueDisplay);
+            // Optionally, if you want the game's actual volume to change live
+            // without waiting for "Save", you can update the settings object
+            // and apply it immediately:
+            // settings.soundVolume = parseFloat(soundVolumeInput.value);
+            // applyGameSettings(); // Or a more specific applySoundVolume()
+        });
+    }
+
+    if (musicVolumeInput) {
+        musicVolumeInput.addEventListener('input', () => {
+            updateVolumeDisplay(musicVolumeInput.value, musicVolumeValueDisplay);
+            // Optionally, apply live:
+            // settings.musicVolume = parseFloat(musicVolumeInput.value);
+            // applyGameSettings(); // Or a more specific applyMusicVolume()
+        });
+    }
+
+    //TODO create a nice little listener for toggle and text  to change locked to unlocked and vice versa
+}
+
+
+// Function to update a volume display
+function updateVolumeDisplay(value, displayElement) {
+    if (displayElement) {
+        const percentage = Math.round(parseFloat(value) * 100);
+        displayElement.textContent = percentage + '%';
+    }
 }

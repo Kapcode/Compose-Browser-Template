@@ -200,6 +200,12 @@ fun HtmlAssetView(
             Log.d("WebViewSetup", "WebView instance created. JS Enabled. DOM Storage Enabled.")
             webViewInstance.settings.javaScriptEnabled = true // Essential
             webViewInstance.settings.domStorageEnabled = true
+            webViewInstance.settings.allowContentAccess = true
+            webViewInstance.settings.allowFileAccess = true
+            webViewInstance.settings.allowFileAccessFromFileURLs = true
+            webViewInstance.settings.allowUniversalAccessFromFileURLs = true
+            webViewInstance.settings.setDatabaseEnabled(true)
+            webViewInstance.settings.setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
 
             // Instantiate and add the interface
             androidBridge =

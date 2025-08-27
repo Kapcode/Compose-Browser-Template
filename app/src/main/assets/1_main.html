@@ -24,7 +24,7 @@
             text-align: center;
         }
         .game-wrapper {
-            overflow: hidden;
+
             width: 100vw;
             /* Take full viewport width */
             height: 100vh;
@@ -47,7 +47,7 @@
         #gameArea {
         /* This is your SVG */
             display: block;
-            overflow: hidden;
+
             user-select: none;
             touch-action: none;
             /* Prevent default touch actions like scrolling */
@@ -266,195 +266,234 @@
            ensure the .settings-content box is opaque enough.
            This rule assumes .screen-overlay might be used for other full-screen messages too.
         */
-        #settingsOverlay {
-            background-color: rgba(0, 0, 0, 0.8); /* Slightly darker overlay background */
-            z-index: 1000; /* High z-index to be on top */
-            /* .hidden class will be toggled by JS */
+
+        #settingsOverlay { /* This is an ID selector, but your CSS uses a class .settings-overlay for the transitions */
+        /* Remove this ID selector if you're primarily styling with the .settings-overlay class */
+        /* background-color: rgba(0, 0, 0, 0.8);
+         z-index: 1000; */
         }
 
-        #settingsOverlay.hidden {
-            display: none; /* Simpler hide/show, or use opacity/visibility like before if you prefer transitions */
+        .settings-overlay {
+
+            position: fixed;
+            inset: 0; /* top, right, bottom, left = 0 */
+
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            /* Add transitions for appearing/disappearing */
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
 
-
-        /* Re-using .content-box as the base for the settings panel */
-        .settings-content { /* Extends/modifies .content-box for settings specifics */
-        /* .content-box already provides background-color: #333, padding, border-radius, color: white, box-shadow */
-            width: 90%; /* Responsive width */
-            max-width: 450px; /* Max width */
-            border: 2px solid #ffd900; /* Yellow accent border, matching your style */
+        .settings-overlay.visible {
+            opacity: 1;
+            visibility: visible;
         }
 
-        .settings-content h2 {
-        /* .content-box h2 styling might already be good, adjust if needed */
-            margin-top: 0;
-            margin-bottom: 25px;
-            font-family: Impact, sans-serif; /* Using Impact like score-splat for headings */
-            color: #ffd900; /* Yellow accent for the title */
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        .settings-panel {
+            background-color: #333; /* Darker theme example */
+            color: #eee;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            width: 75vw; /* Default width, good for portrait */
+            max-width: 800px; /* Max width it can grow to */
+            max-height: 75vh; /* Max height before scrolling kicks in */
+            overflow-y: auto; /* Enable vertical scrolling for the panel */
+            scrollbar-width: thin; /* Or 'thin' if you prefer and it's supported */
+            /* Choose colors that contrast well with your panel background and each other */
+            scrollbar-color: #888 #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #555;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .settings-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        #closeSettingsButton {
+            background: none;
+            border: none;
+            color: #eee;
+            font-size: 1.8em;
+            cursor: pointer;
+        }
+
+        .settings-content {
+        /* This is where individual settings go.
+           It will naturally grow and cause .settings-panel to scroll if needed. */
+            flex-grow: 1; /* Allows this section to take available space if panel has fixed height */
         }
 
         .setting-item {
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
+            display: flex; /* For label and input alignment */
+            flex-wrap: wrap; /* Allow items to wrap if needed on small screens */
+            justify-content: space-between;
             align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #444;
+            border-radius: 5px;
         }
 
         .setting-item label {
-            flex-basis: 130px; /* Adjust as needed */
-            margin-right: 15px;
-            color: #f0f0f0; /* Light gray for readability on dark background */
-            font-family: Verdana, sans-serif; /* Consistent with score display */
-            font-size: 1em;
+            margin-right: 10px;
+            flex-basis: 120px; /* Give labels a consistent minimum width */
+            flex-shrink: 0;
         }
 
-        /* Styling for input elements to match the dark theme */
-        .setting-item input[type="range"],
         .setting-item input[type="text"],
+        .setting-item input[type="range"],
         .setting-item select {
-            flex-grow: 1;
-            padding: 8px 10px;
-            background-color: #555; /* Darker background for inputs */
-            color: #f0f0f0; /* Light text color */
-            border: 1px solid #777; /* Border similar to buttons */
-            border-radius: 5px; /* Consistent border-radius */
-            box-sizing: border-box;
-            font-family: Verdana, sans-serif;
-            font-size: 0.9em;
-        }
-
-        .setting-item input[type="text"]::placeholder { /* Style placeholder text */
-            color: #aaa;
-            opacity: 1; /* Override browser defaults */
-        }
-
-        .setting-item select option {
+            flex-grow: 1; /* Allow inputs to take remaining space */
+            min-width: 150px; /* Ensure inputs don't get too squished */
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #555;
             background-color: #555;
-            color: #f0f0f0;
+            color: #eee;
+        }
+
+        /* Specific styling for range slider value display */
+        .setting-item input[type="range"] {
+            flex-basis: calc(100% - 60px); /* Adjust based on span width */
+        }
+        .setting-item span { /* For volume percentage, etc. */
+            margin-left: 10px;
+            flex-basis: 50px; /* Give it some space */
+            text-align: right;
         }
 
 
-        /* Custom styling for range inputs (sliders) can be tricky and browser-specific
-           Here's a basic attempt to make them fit the dark theme better.
-           You might need to use more specific pseudo-elements for deeper customization.
-        */
-        .setting-item input[type="range"] {
-            -webkit-appearance: none; /* Override default appearance */
-            appearance: none;
-            height: 8px; /* Track height */
-            background: #444; /* Track color */
+        .settings-footer {
+            border-top: 1px solid #555;
+            padding-top: 15px;
+            margin-top: 15px;
+            text-align: right;
+        }
+
+        #saveSettingsButton {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
             border-radius: 5px;
             cursor: pointer;
         }
 
-        .setting-item input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #ffd900; /* Thumb color - yellow accent */
-            border-radius: 50%;
-            border: 2px solid #333; /* Border for the thumb */
-            cursor: pointer;
+        #saveSettingsButton:hover {
+            background-color: #0056b3;
         }
-
-        .setting-item input[type="range"]::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            background: #ffd900;
-            border-radius: 50%;
-            border: 2px solid #333;
-            cursor: pointer;
-        }
-
-
-        .setting-item .volume-value { /* For displaying volume percentage */
-            margin-left: 10px;
-            min-width: 45px;
-            color: #f0f0f0;
-            font-family: Verdana, sans-serif;
-            font-size: 0.9em;
-        }
-
-        .settings-buttons {
-            margin-top: 30px;
-            text-align: center; /* Center the buttons */
-            display: flex;
-            justify-content: space-around; /* Space out buttons */
-            flex-wrap: wrap; /* Wrap if not enough space */
-            gap: 10px; /* Space between buttons if they wrap */
-        }
-
-        /* Re-using .content-box button style as a base for settings action buttons */
-        .settings-action-button {
-        /* Inherits from .content-box button:
-           display: block; width: 100%; padding: 12px; margin-bottom: 10px;
-           font-size: 16px; background-color: #555; color: white;
-           border: 1px solid #777; border-radius: 5px; cursor: pointer;
-           transition: background-color 0.2s ease-in-out;
-        */
-            width: auto; /* Override width: 100% to allow side-by-side */
-            flex-grow: 1; /* Allow buttons to grow and share space */
-            max-width: 180px; /* Max width per button */
-            margin-bottom: 0; /* Remove bottom margin if using flex gap */
-            padding: 10px 15px; /* Slightly adjust padding if needed */
-        }
-
-        .settings-action-button:hover {
-            background-color: #6E6E6E; /* Slightly lighter gray on hover */
-            border-color: #999;
-        }
-
-        .settings-action-button.reset-button {
-            background-color: #d9534f; /* A reddish color for reset/danger */
-            border-color: #c9302c;
-        }
-
-        .settings-action-button.reset-button:hover {
-            background-color: #c9302c;
-            border-color: #ac2925;
-        }
-
-
-        /* Responsive adjustments if needed */
-        @media (max-width: 480px) {
+        /* --- Landscape Adjustments --- */
+        @media (orientation: landscape) and (max-height: 500px) { /* Example: for shorter landscape screens */
+            .settings-panel {
+            /* Potentially allow it to be wider */
+                width: 70vw;
+                max-width: 700px; /* A wider max for landscape */
+                /* If content is still too tall, max-height and overflow-y will handle scrolling */
+                max-height: 75vh; /* Or even calc(100vh - 40px) to leave some margin */
+                /* If 85vh was too much, try reducing it further.
+                  The goal is for 85vh + panel's vertical padding + overlay's vertical padding
+                  to be LESS THAN OR EQUAL TO actual viewport height. */
+            }
+            .settings-overlay {
+            /* If panel is still too tall and gets centered, its top/bottom will be cut.
+               align-items: flex-start ensures the top is visible. */
+                align-items: flex-start;
+                padding-top: 20px; /* Give some space from the top */
+                padding-bottom: 20px; /* Ensure space at bottom if panel itself is scrollable */
+            }
+            /* Example: Make settings appear in two columns in landscape if there's enough width */
             .settings-content {
-                padding: 20px 15px; /* Slightly less padding on small screens */
+            /* This is a more advanced use case, might need display: grid here instead for .settings-content */
+            /* display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px; */
             }
 
             .setting-item label {
-                flex-basis: 100%; /* Labels take full width */
-                margin-bottom: 8px;
-                text-align: left;
-            }
-
-            .setting-item input[type="range"],
-            .setting-item input[type="text"],
-            .setting-item select,
-            .setting-item .volume-value {
-                width: 100%;
-                margin-left: 0;
-            }
-
-            .setting-item .volume-value {
-                text-align: right;
-                margin-top: 5px;
-            }
-
-            .settings-buttons {
-                flex-direction: column; /* Stack buttons vertically */
-                align-items: center;
-            }
-            .settings-action-button {
-                width: 100%; /* Full width when stacked */
-                margin-bottom: 10px; /* Add margin back for stacked buttons */
-            }
-            .settings-action-button:last-child {
-                margin-bottom: 0;
+            /* You might adjust label widths or text alignment in landscape */
             }
         }
 
+        /* You can also use width-based media queries */
+        @media (min-width: 768px) { /* For wider screens (often landscape on tablets) */
+            .settings-panel {
+                width: 60vw;
+                max-width: 600px;
+            }
+        }
+
+
+        .toggle {
+            position: absolute;
+            cursor: pointer;
+            opacity: 0;
+        }
+
+        .toggle + label {
+            --toggle-color: #FFF;
+            --toggle-bg-color: #C6D0CC;
+            position: relative;
+            padding-left: 5rem;
+            line-height: 2.5rem;
+            cursor: pointer;
+        }
+
+        /* The toggle container */
+        .toggle + label:before {
+            content: "";
+            box-sizing: border-box;
+            position: absolute;
+            left: 0;
+            width: 4.5rem;
+            height: 2.5rem;
+            border: 1px solid var(--toggle-color);
+            border-radius: 1.25rem;
+            background-color: var(--toggle-bg-color);
+            transition: background-color 200ms;
+        }
+
+        /* The toggle ball */
+        .toggle + label:after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0.25rem;
+            width: 2rem;
+            height: 2rem;
+            margin: auto;
+            transform: translate(0, 0);
+            border-radius: 50%;
+            background-color: var(--toggle-color);
+            cursor: pointer;
+            transition: transform 200ms;
+        }
+
+        /* The active styling */
+        .toggle:checked + label {
+            --toggle-color: #FFFFFF;
+            --toggle-bg-color: #20b776;
+        }
+
+        .toggle:checked + label:after {
+            transform: translate(2rem, 0);
+        }
 
 
 
@@ -492,13 +531,11 @@
             padding: 0;
             width: 100vw; /* Use viewport units to fill width */
             height: 100vh; /* Use viewport units to fill height */
-            overflow: hidden; /* CRITICAL: Prevents scrollbars and panning of the body itself */
+
             box-sizing: border-box;
             /* Important for games: ensure the browser doesn't try to do things like "pull-to-refresh"
                or other default touch actions if your game handles all touch. */
             touch-action: none;
-            margin: 0;
-            padding: 0;
 
             /* REMOVE any background-image properties from 'body' if you use #backgroundImageContainer for the image */
         }
@@ -549,39 +586,41 @@
 
 
         <!-- Settings Overlay (initially hidden) -->  <!-- Settings Overlay -->
-    <div id="settingsOverlay" class="screen-overlay hidden"> <!-- Re-using .screen-overlay for consistency -->
-        <div class="content-box settings-content"> <!-- Re-using .content-box -->
-            <h2>Game Settings</h2>
-
-            <div class="setting-item">
-                <label for="soundVolume">Sound Volume:</label>
-                <input type="range" id="soundVolume" name="soundVolume" min="0" max="1" step="0.01">
-                <span id="soundVolumeValue" class="volume-value">75%</span>
+    <div id="settingsOverlay" class="settings-overlay">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h2>Game Settings</h2>
+                <button id="closeSettingsButton">&times;</button>
             </div>
+            <div class="settings-content"> <!-- This area will contain the actual settings -->
+                <div class="setting-item">
+                    <label for="playerName">Player Name:</label>
+                    <input type="text" id="playerName" name="playerName">
+                </div>
+                <div class="setting-item">
+                    <label for="soundVolume">Sound Volume:</label>
+                    <input type="range" id="soundVolume" name="soundVolume" min="0" max="1" step="0.01">
+                    <span id="soundVolumeValue">50%</span>
+                </div>
 
-            <div class="setting-item">
-                <label for="musicVolume">Music Volume:</label>
-                <input type="range" id="musicVolume" name="musicVolume" min="0" max="1" step="0.01">
-                <span id="musicVolumeValue" class="volume-value">50%</span>
+
+                <div class="setting-item">
+                    <label for="musicVolume">Music Volume:</label>
+                    <input type="range" id="musicVolume" name="musicVolume" min="0" max="1" step="0.01">
+                    <span id="musicVolumeValue">50%</span>
+                </div>
+
+
+                <div class="setting-item">
+                    <input type="checkbox" class="toggle" id="rotation-lock" name="rotation-lock">
+                    <label for="rotation-lock">Rotation: 🔒</label>
+                </div>
+
+
+                <!-- ... more settings ... -->
             </div>
-
-            <div class="setting-item">
-                <label for="difficulty">Difficulty:</label>
-                <select id="difficulty" name="difficulty">
-                    <option value="easy">Easy</option>
-                    <option value="normal">Normal</option>
-                    <option value="hard">Hard</option>
-                </select>
-            </div>
-
-             <div class="setting-item">
-                <label for="playerName">Player Name:</label>
-                <input type="text" id="playerName" name="playerName" placeholder="Enter name">
-            </div>
-
-            <div class="settings-buttons">
-                <button id="closeSettingsButton" class="settings-action-button">Close & Save</button>
-                <button id="resetSettingsButton" class="settings-action-button reset-button">Reset</button>
+            <div class="settings-footer">
+                <button id="saveSettingsButton">Save</button>
             </div>
         </div>
     </div>
