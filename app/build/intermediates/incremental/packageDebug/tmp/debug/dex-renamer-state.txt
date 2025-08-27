@@ -1,4 +1,4 @@
-#Mon Aug 25 17:23:29 EDT 2025
+#Tue Aug 26 17:51:35 EDT 2025
 base.0=C\:\\Users\\prospet0\\AndroidStudioProjects\\Compose-Browser-Template\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=C\:\\Users\\prospet0\\AndroidStudioProjects\\Compose-Browser-Template\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.2=C\:\\Users\\prospet0\\AndroidStudioProjects\\Compose-Browser-Template\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex
