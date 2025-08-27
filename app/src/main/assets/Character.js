@@ -1,10 +1,13 @@
 import { Sprite } from './Sprite.js';
+import * as globals from './globals.js';
+import { getSpriteSheetImage, isSpriteSheetLoaded } from './assetManager.js'; // <--- ADD THIS IMPORT
 export class Character extends Sprite {
     constructor(x, y, animationName, spriteScale, health, speed) {
         super(x, y, animationName, spriteScale);
         this.entityType = "character"; // More specific
         this.health = health;
         this.speed = speed;
+        this.image = getSpriteSheetImage(); // <--- USE THE IMPORTED FUNCTION
         this.direction = { x: 0, y: 0 };
     }
 

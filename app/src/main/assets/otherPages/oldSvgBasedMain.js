@@ -1,4 +1,4 @@
-import { simplePickleSvgString } from './constants.js';
+import { simplePickleSvgString } from './globals.js';
 import { setVolume,playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagement.js';
 

@@ -1,4 +1,8 @@
 import { GameObject } from './GameObject.js';
+import * as globals from './globals.js';
+import { ANIMATIONS } from './globals.js';
+import { getSpriteSheetImage, isSpriteSheetLoaded } from './assetManager.js'; // <--- ADD THIS IMPORT
+import {ctx} from './main.js';
 export class Sprite extends GameObject {
     constructor(x, y, animationName, spriteScale = 1.0) {
         const initialAnimDef = ANIMATIONS[animationName];
@@ -6,7 +10,8 @@ export class Sprite extends GameObject {
         // Width/height from sprite frame, scaled by spriteScale for native size
         super(x, y, initialFrame.sWidth * spriteScale, initialFrame.sHeight * spriteScale);
         this.type = "sprite";
-        this.image = spriteSheetImage; // Assuming spriteSheetImage is global/accessible
+        // Instead of a global 'spriteSheetImage', get it from the assetManager
+        this.image = getSpriteSheetImage(); // <--- USE THE IMPORTED FUNCTION // Assuming spriteSheetImage is global/accessible
         this.animationName = animationName;
         this.currentFrameIndex = 0;
         this.totalFramesInAnimation = initialAnimDef.frames.length;
@@ -17,9 +22,9 @@ export class Sprite extends GameObject {
         this.facingDirection = 1; // 1 for right, -1 for left
     }
 
+
     update(deltaTime, currentTime, activeGameElements) {
         super.update(deltaTime, currentTime);
-
         const animDef = ANIMATIONS[this.animationName];
 
         // **** ADD THIS CRITICAL DEBUGGING ****
@@ -35,7 +40,7 @@ export class Sprite extends GameObject {
             return;
         }
 
-        if(debugDraw)console.log(
+        if(globals.debugDraw)console.log(
             `Sprite Update Pre-FrameFetch DEBUG: Entity: ${this.entityType}, Anim: ${this.animationName}, ` +
             `FrameIndex: ${this.currentFrameIndex}, TotalFrames: ${this.totalFramesInAnimation}, ` +
             `Actual Frames in animDef: ${animDef.frames.length}`
@@ -44,7 +49,7 @@ export class Sprite extends GameObject {
 
         const currentFrameDef = animDef.frames[this.currentFrameIndex];
         // Your existing log:
-        if(debugDraw)console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
+        if(globals.debugDraw)console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
 
 
         if (!currentFrameDef) {
@@ -125,11 +130,11 @@ export class Sprite extends GameObject {
         // DEBUG BOUNDARY CHECK:
         // Make sure you are using the same width calculation as in your collision logic.
 
-        if(debugDraw) {
+        if(globals.debugDraw) {
 
 
-            const debugDrawWidth = frame.sWidth * this.spriteScale;
-            const debugDrawHeight = frame.sHeight * this.spriteScale;
+            const DrawWidth = frame.sWidth * this.spriteScale;
+            const DrawHeight = frame.sHeight * this.spriteScale;
 
             // Save current global alpha and fill style
             let originalAlpha = ctx.globalAlpha;
@@ -140,7 +145,7 @@ export class Sprite extends GameObject {
             // Note: this.x and this.y are already in the globally transformed space's native coordinates
             // No extra translation needed here IF this.x, this.y is the top-left for drawing.
             // If your this.x/this.y is a center point, adjust drawing accordingly.
-            //ctx.fillRect(this.x, this.y, debugDrawWidth, debugDrawHeight);
+            ctx.fillRect(this.x, this.y, DrawWidth, DrawHeight);
 
             // Restore alpha and fill style
             ctx.globalAlpha = originalAlpha;
