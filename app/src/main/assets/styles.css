@@ -70,7 +70,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
             display: flex;
@@ -92,7 +91,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
             display: flex;
@@ -115,7 +113,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-                       /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
            display: flex;
@@ -131,7 +128,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
             display: flex;
@@ -154,7 +150,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
             display: flex;
@@ -172,7 +167,6 @@
             margin-right: auto;
             margin-bottom: 20px;
             margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
             position: relative; /* Still good practice if other absolute elements might appear */
 
             display: flex;
@@ -199,9 +193,6 @@
     position: relative; /* For absolute positioning of overlay AND strips-container */
     max-width: 750px;
     margin: auto;
-            /* height: auto; */ /* Implicitly auto */
-    position: relative; /* Still good practice if other absolute elements might appear */
-
     display: flex;
     justify-content: center; /* Horizontally centers flex items */
     align-items: center;    /* Vertically centers flex items */
@@ -234,7 +225,6 @@
 
 .bottom-color-strip {
     flex: 1; /* Takes 50% of .strips-container's height */
-    /* height: 50%; */
      background: linear-gradient(
             to right,
             #E68E8E 0%, #E68E8E 16.66%,
@@ -259,17 +249,15 @@
         }
 
             .experience-box {
-                    background-color: #E3D99A;
-                    padding: 20px;
-                    min-height: 200px;
-                    max-width: 750px; /* Good for readability */
-                    margin-left: auto;
-                    margin-right: auto;
-                    margin-bottom: 20px;
-                    margin-top: 20px;
-            /* height: auto; */ /* Implicitly auto */
+            background-color: #E3D99A;
+            padding: 20px;
+            min-height: 200px;
+            max-width: 750px; /* Good for readability */
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 20px;
+            margin-top: 20px;
             position: relative; /* Still good practice if other absolute elements might appear */
-
             display: flex;
             justify-content: center; /* Horizontally centers flex items */
             align-items: center;    /* Vertically centers flex items */
@@ -327,9 +315,8 @@
 
         /* When the checkbox is checked (label is clicked) */
         .image-expander-checkbox:checked + .image-expander-label + .image-expander-content {
-            max-height: 500px; /* EXPANDED: Adjust to a value larger than your expected content height */
+            max-height: 9000px; /* EXPANDED: Adjust to a value larger than your expected content height */
             padding: 15px;    /* Add padding when open */
-            max-height: 9000px;
         }
 
         /* Optional: Style for the label when expanded */

@@ -27,6 +27,7 @@ import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.compose.ui.platform.LocalContext
 import com.kapcode.ComposeBrowserTemplate.ui.theme.LearnWithAiTheme // Make sure this theme path is correct
@@ -34,11 +35,11 @@ import java.io.IOException
 import androidx.compose.runtime.saveable.rememberSaveable // Import this
 import androidx.compose.ui.graphics.Color
 import androidx.webkit.WebViewAssetLoader
-import com.google.accompanist.web.WebContent
+import com.google.accompanist.web.WebContent//todo replace accompanist.web.WebContent, it is depreciated
 import com.google.accompanist.web.rememberWebViewNavigator
 
 @SuppressLint("StaticFieldLeak")//I am setting null on dispose
-private var internalWebView: android.webkit.WebView? = null
+private var internalWebView: WebView? = null
 @SuppressLint("StaticFieldLeak")
 private var androidBridge: Any = Any()
 class MainActivity : ComponentActivity() {
@@ -91,12 +92,12 @@ class MainActivity : ComponentActivity() {
             // 2. Get the Vibrator service
             val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // For Android 12 (API 31) and above, use VibratorManager
-                val vibratorManager = this.context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                val vibratorManager = this.context.getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 vibratorManager.defaultVibrator // Get the default system vibrator
             } else {
                 // For older versions, directly get Vibrator service (deprecated in API 31)
                 @Suppress("DEPRECATION")
-                this.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                this.context.getSystemService(VIBRATOR_SERVICE) as Vibrator
             }
 
             // 3. Create the VibrationEffect and Vibrate
@@ -164,6 +165,7 @@ class MainActivity : ComponentActivity() {
 
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
 fun HtmlAssetView(
@@ -200,12 +202,12 @@ fun HtmlAssetView(
             Log.d("WebViewSetup", "WebView instance created. JS Enabled. DOM Storage Enabled.")
             webViewInstance.settings.javaScriptEnabled = true // Essential
             webViewInstance.settings.domStorageEnabled = true
-            webViewInstance.settings.allowContentAccess = true
-            webViewInstance.settings.allowFileAccess = true
-            webViewInstance.settings.allowFileAccessFromFileURLs = true
-            webViewInstance.settings.allowUniversalAccessFromFileURLs = true
-            webViewInstance.settings.setDatabaseEnabled(true)
-            webViewInstance.settings.setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT)
+            webViewInstance.settings.allowFileAccess = false;
+            webViewInstance.settings.allowContentAccess = false;
+            webViewInstance.settings.domStorageEnabled = true;
+            webViewInstance.settings.setSupportMultipleWindows(false);
+            webViewInstance.settings.safeBrowsingEnabled = true;
+            webViewInstance.settings.cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
 
             // Instantiate and add the interface
             androidBridge =
@@ -223,6 +225,7 @@ fun HtmlAssetView(
     )
 }
 
+@SuppressLint("NewApi")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HtmlViewer(mainActivityInstance: MainActivity) {
