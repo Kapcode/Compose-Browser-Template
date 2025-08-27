@@ -62,6 +62,7 @@ export function loadSettings() {
             console.log('Settings loaded from localStorage:', settings);
         } else {
             console.log('No saved settings found. Using defaults.');
+
             // Optionally save default settings here if you want them persisted immediately
             // saveSettings();
         }

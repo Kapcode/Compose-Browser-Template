@@ -3,21 +3,11 @@ import { simplePickleSvgString } from './constants.js';
 import { setVolume,playPooledSound } from './audioManagment.js';
 import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagment.js';
 
-/*
-const svgNS = "http://www.w3.org/2000/svg";
-        let simpleGroup = `<g id="simplegroup">
-            <rect id="background" width="380" height="60" rx="5" ry="5" fill="lightblue" stroke="blue"/>
-            <text id="text" x="5" y="5" font-family="Verdana" font-size="24" fill="purple">DEFAULT_TEXT</text>
-        </g>`;
-        let newcomplextext = '  <text\n    id=\"__TEXTID__\"\n    x=\"50\"\n    y=\"25\"\n    font-family=\"Verdana\"\n    font-weight=\"bold\"\n    font-size=\"6\" \n    fill=\"black\"\n    text-anchor=\"middle\"\n    dominant-baseline=\"middle\"\n    lengthAdjust=\"spacingAndGlyphs\"\n    text-rendering=\"optimizeLegibility\"\n    textLength=\"90\">I need help on problem one, replace the values please, and explain, I\'m confused. (Supply problem 1)</text>';
-*/
 
+        let debugDraw = false;
         let gamePaused = false;
         let gameStopped = true; // New flag to track if the game is fully stopped
         let timeWhenPauseActuallyStarted = 0;
-
-        // --- DEBUG ---
-        const logSVG = false; // Set to true to log SVG strings for debugging
         const gameStateLogs = false; // Set to true to log game state changes // set false on release, true for debugging, prevents tons of console logs
 
         // --- Game Area Dimensions ---
@@ -682,7 +672,19 @@ const SPAWN_INTERVAL_FRAMES = 120; // Spawn roughly every 2 seconds if MAX_DELTA
            // spawnPatrollingChef(nativeGameHeight - 100, chefScale, 50);
             // Spawning:
             //activeGameElements.push(new Player(50, nativeGameHeight - 150, "cheff_ketchup_walk", 1.0));
-            activeGameElements.push(new EnemyPatrol(200, nativeGameHeight - 150, "cheff_ketchup_walk", 1.0, 50, 80, 100, nativeGameWidth - 100));
+           // activeGameElements.push(new EnemyPatrol(200, nativeGameHeight - 150, "cheff_ketchup_walk", 1.0, 50, 80, 100, nativeGameWidth - 100));
+            const eChef1 = new EnemyPatrol(
+                200,
+                nativeGameHeight - 150,
+                "cheff_ketchup_walk",
+                1.0,
+                50,
+                80,
+                0,
+                nativeGameWidth
+            );
+
+            activeGameElements.push(eChef1);
             // spawnAnimatedSprite("cheff_ketchup_walk", x, y, { scale: 0.5, entityType: 'enemy_chef_ketchup', ... });
         }
 
@@ -1143,6 +1145,7 @@ class Sprite extends GameObject {
 
         // **** ADD THIS CRITICAL DEBUGGING ****
         if (!animDef) {
+
             console.error(`ERROR in Sprite Update: No animDef for animationName: '${this.animationName}' for entity:`, this.entityType);
             this.isActive = false; // Stop this broken sprite
             return;
@@ -1153,7 +1156,7 @@ class Sprite extends GameObject {
             return;
         }
 
-        console.log(
+        if(debugDraw)console.log(
             `Sprite Update Pre-FrameFetch DEBUG: Entity: ${this.entityType}, Anim: ${this.animationName}, ` +
             `FrameIndex: ${this.currentFrameIndex}, TotalFrames: ${this.totalFramesInAnimation}, ` +
             `Actual Frames in animDef: ${animDef.frames.length}`
@@ -1162,7 +1165,7 @@ class Sprite extends GameObject {
 
         const currentFrameDef = animDef.frames[this.currentFrameIndex];
         // Your existing log:
-        console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
+        if(debugDraw)console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
 
 
         if (!currentFrameDef) {
@@ -1239,6 +1242,33 @@ class Sprite extends GameObject {
             ctx.drawImage(this.image, frame.sx, frame.sy, frame.sWidth, frame.sHeight, drawX, drawY, drawWidth, drawHeight);
         }
 
+
+        // DEBUG BOUNDARY CHECK:
+        // Make sure you are using the same width calculation as in your collision logic.
+
+        if(debugDraw) {
+
+
+            const debugDrawWidth = frame.sWidth * this.spriteScale;
+            const debugDrawHeight = frame.sHeight * this.spriteScale;
+
+            // Save current global alpha and fill style
+            let originalAlpha = ctx.globalAlpha;
+            let originalFill = ctx.fillStyle;
+
+            ctx.globalAlpha = 0.3; // Make it semi-transparent
+            ctx.fillStyle = 'cyan';
+            // Note: this.x and this.y are already in the globally transformed space's native coordinates
+            // No extra translation needed here IF this.x, this.y is the top-left for drawing.
+            // If your this.x/this.y is a center point, adjust drawing accordingly.
+            //ctx.fillRect(this.x, this.y, debugDrawWidth, debugDrawHeight);
+
+            // Restore alpha and fill style
+            ctx.globalAlpha = originalAlpha;
+            ctx.fillStyle = originalFill;
+        }
+
+
         ctx.restore();
     }
 }
@@ -1283,8 +1313,9 @@ class EnemyPatrol extends Character {
         super(x, y, animationName, spriteScale, health, speed);
         this.entityType = "enemy_chef_ketchup_patrol";
         this.direction.x = 1; // Start moving right
-        this.patrolMinX = patrolMinX;//0
-        this.patrolMaxX = patrolMaxX;//nativeGameWidth
+        this.patrolMinX = patrolMinX;//0 should be
+        this.patrolMaxX = patrolMaxX;//nativeGameWidth should be
+        if(debugDraw)console.log(`EnemyPatrol CONSTRUCTOR: Spawned with patrolMinX=${this.patrolMinX}, patrolMaxX=${this.patrolMaxX}`);
     }
 
     update(deltaTime, currentTime, activeGameElements) {
@@ -1307,7 +1338,13 @@ class EnemyPatrol extends Character {
         }
 
         const currentSpriteNativeWidth = currentFrameDef.sWidth * this.spriteScale; // THIS IS THE WIDTH OF THE CURRENT VISUAL FRAME
-
+        if(debugDraw)console.log(
+            `Boundary Check DEBUG: Chef X: ${this.x.toFixed(2)}, ` +
+            `SpriteNativeWidth: ${currentSpriteNativeWidth.toFixed(2)}, ` +
+            `CalculatedRightEdge: ${(this.x + currentSpriteNativeWidth).toFixed(2)}, ` +
+            `patrolMinX: ${this.patrolMinX}, patrolMaxX: ${this.patrolMaxX}, ` +
+            `sWidth: ${currentFrameDef.sWidth}, spriteScale: ${this.spriteScale}`
+        );
         // RIGHT BOUNDARY CHECK:
         // Checks if the Chef's RIGHT EDGE (this.x + currentSpriteNativeWidth) has hit or passed nativeGameWidth
         if (this.direction.x > 0 && (this.x + currentSpriteNativeWidth) >= this.patrolMaxX) { // Assuming patrolMaxX is nativeGameWidth for full screen patrol
@@ -1372,7 +1409,7 @@ let chefKetchup; // Variable to hold our Chef Ketchup sprite instance
 // Option A: A new function specific for spawning Chef Ketchup with a direction
 // Option A: A new function specific for spawning Chef Ketchup with a direction AND SCALE
 function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desiredScale = 1.0) { // Added desiredScale, default to 1.0
-    console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
+    if(debugDraw)console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
     // 1. Get the animation definition for the chef's current animation
 
     const animDef = ANIMATIONS[chef.animationName];
@@ -1411,7 +1448,7 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
     chef.y = nativeGameHeight - dHeight - desiredPadding;
 
     if (chefKetchup) {
-        console.log("Chef Ketchup spawned walking!", chefKetchup);
+        if(debugDraw)console.log("Chef Ketchup spawned walking!", chefKetchup);
         // You can also log the actual scale that got applied if spawnAnimatedSprite returns the object
         // console.log("Chef's actual scale after spawn:", chefKetchup.spriteScale);
         // Or if spawnAnimatedSprite modifies customChefProps, check there.
@@ -1474,22 +1511,11 @@ function spawnPatrollingChef(startY, scale = 1.0, speed = 50) {
     const desiredPadding = 10;
 
 
-    console.log(`Spawning Chef for animation "${chef.animationName}" at y=${chef.y} (sHeight=${sHeight}, dHeight=${dHeight})`);
-
-
-
-
-
-
-
-
-
-
-
+    if(debugDraw)console.log(`Spawning Chef for animation "${chef.animationName}" at y=${chef.y} (sHeight=${sHeight}, dHeight=${dHeight})`);
 
     chef.y = nativeGameHeight - dHeight - desiredPadding;
     if (chef) {
-        console.log(`Patrolling Chef spawned at (${startX},${startY}), speed: ${speed}, scale: ${scale}`);
+        if(debugDraw)console.log(`Patrolling Chef spawned at (${startX},${startY}), speed: ${speed}, scale: ${scale}`);
     } else {
         console.error("Failed to spawn Patrolling Chef.");
     }
@@ -1564,11 +1590,12 @@ function drawGameElements(ctx) {
     // --- 4. DRAW THE NATIVE GAME AREA BORDER (DEBUG) ---
     // This is now drawn ONCE, within the globally transformed space.
     // (0,0) here refers to the top-left of your NATIVE game world, which is then scaled and positioned.
-    ctx.strokeStyle = 'red'; // Or blue, to see it's different
-    ctx.lineWidth = Math.max(1, 2 / currentScale); // Ensure line width is visible, at least 1px
-    ctx.strokeRect(0, 0, nativeGameWidth, nativeGameHeight);
-    // ----------------------------------------------------
 
+    // ----------------------------------------------------
+    //debug box draw first so my game content can take prority over my border
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 2 / currentScale;
+    ctx.strokeRect(0, 0, nativeGameWidth, nativeGameHeight);
     // 5. DRAW ALL ACTIVE GAME ELEMENTS
     // Each element's draw method will operate within this globally transformed space.
     activeGameElements.forEach(element => {
@@ -1578,10 +1605,6 @@ function drawGameElements(ctx) {
             element.draw(ctx);
         }
     });
-    //debug box
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2 / currentScale;
-    ctx.strokeRect(0, 0, nativeGameWidth, nativeGameHeight);
     // 6. RESTORE CANVAS TO DEFAULT STATE
     // This removes the global translate and scale, crucial if you draw UI elements
     // directly on the canvas afterward in screen coordinates.
@@ -1607,7 +1630,7 @@ function resizeCanvasAndCalculateScale() {
     // Set the drawing surface dimensions
     canvas.width = window.innerWidth;  // e.g., 923
     canvas.height = window.innerHeight; // e.g., 363
-    showAndroidToast(`Canvas attributes set to W=${canvas.width}, H=${canvas.height}`);
+    if(debugDraw)showAndroidToast(`Canvas attributes set to W=${canvas.width}, H=${canvas.height}`);
 
     // IMPORTANT: Ensure CSS display size matches attribute size
     // to prevent browser stretching.
@@ -1620,11 +1643,11 @@ function resizeCanvasAndCalculateScale() {
     // These calculations will now use the 923x363 dimensions.
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    showAndroidToast(`PHONE_SCALE_DEBUG: Canvas W=${canvas.width}, H=${canvas.height}`)
+    if(debugDraw)showAndroidToast(`PHONE_SCALE_DEBUG: Canvas W=${canvas.width}, H=${canvas.height}`)
     let screenAspectRatio = canvas.width / canvas.height;
 
-    console.log(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${nativeGameAspectRatio}`);
-    showAndroidToast(`aspect ratio: ${screenAspectRatio}`)
+    if(debugDraw)console.log(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${nativeGameAspectRatio}`);
+    if(debugDraw)showAndroidToast(`aspect ratio: ${screenAspectRatio}`)
 
     if (screenAspectRatio > nativeGameAspectRatio) {
         // Screen is WIDER than the game's native aspect ratio (pillarbox)
@@ -1632,17 +1655,17 @@ function resizeCanvasAndCalculateScale() {
         currentScale = canvas.height / nativeGameHeight;
         currentOffsetX = (canvas.width - (nativeGameWidth * currentScale)) / 2;
         currentOffsetY = 0;
-        showAndroidToast(`PHONE_SCALE_DEBUG: Pillarbox. Scale by H. currentScale=${currentScale}`);
+        if(debugDraw)showAndroidToast(`PHONE_SCALE_DEBUG: Pillarbox. Scale by H. currentScale=${currentScale}`);
     } else {
         // Screen is TALLER/NARROWER than the game's native aspect ratio (letterbox)
         // Scale is based on width
         currentScale = canvas.width / nativeGameWidth;
         currentOffsetX = 0;
         currentOffsetY = (canvas.height - (nativeGameHeight * currentScale)) / 2;
-        showAndroidToast(`PHONE_SCALE_DEBUG: Letterbox. Scale by W. currentScale=${currentScale}`);
+        if(debugDraw)showAndroidToast(`PHONE_SCALE_DEBUG: Letterbox. Scale by W. currentScale=${currentScale}`);
     }
-    console.log(`nativeGameAspectRatio = ${nativeGameAspectRatio} screen aspect ratio = ${screenAspectRatio}` );
-    console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${currentScale}, cOffsetX=${currentOffsetX}, cOffsetY=${currentOffsetY}`);
+    if(debugDraw)console.log(`nativeGameAspectRatio = ${nativeGameAspectRatio} screen aspect ratio = ${screenAspectRatio}` );
+    if(debugDraw)console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${currentScale}, cOffsetX=${currentOffsetX}, cOffsetY=${currentOffsetY}`);
 }
 
 
