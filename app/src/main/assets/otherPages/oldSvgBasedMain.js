@@ -1,6 +1,6 @@
 import { simplePickleSvgString } from './constants.js';
-import { setVolume,playPooledSound } from './audioManagment.js';
-import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagment.js';
+import { setVolume,playPooledSound } from './audioManagement.js';
+import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress } from './settingsManagement.js';
 
 const svgNS = "http://www.w3.org/2000/svg";
         let simpleGroup = `<g id="simplegroup">

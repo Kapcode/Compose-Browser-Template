@@ -267,11 +267,7 @@
            This rule assumes .screen-overlay might be used for other full-screen messages too.
         */
 
-        #settingsOverlay { /* This is an ID selector, but your CSS uses a class .settings-overlay for the transitions */
-        /* Remove this ID selector if you're primarily styling with the .settings-overlay class */
-        /* background-color: rgba(0, 0, 0, 0.8);
-         z-index: 1000; */
-        }
+
 
         .settings-overlay {
 
@@ -416,13 +412,6 @@
                 align-items: flex-start;
                 padding-top: 20px; /* Give some space from the top */
                 padding-bottom: 20px; /* Ensure space at bottom if panel itself is scrollable */
-            }
-            /* Example: Make settings appear in two columns in landscape if there's enough width */
-            .settings-content {
-            /* This is a more advanced use case, might need display: grid here instead for .settings-content */
-            /* display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px; */
             }
 
             .setting-item label {
@@ -626,9 +615,9 @@
     </div>
     <!--load in sounds before script-->>
     <audio id="gameOverSound" src="/sounds/gameOver.wav"></audio>
-    <script type="module" src="/tileMapManagment.js"></script>
-    <script type="module" src="/audioManagment.js"></script>
-    <script type="module" src="/settingsManagment.js"></script>
+    <script type="module" src="/tileMapManagement.js"></script>
+    <script type="module" src="/audioManagement.js"></script>
+    <script type="module" src="/settingsManagement.js"></script>
     <script type="module" src="/main.js"></script>
 </body>
 

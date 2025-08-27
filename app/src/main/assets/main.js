@@ -1,7 +1,7 @@
-import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagment.js';
+import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagement.js';
 import { simplePickleSvgString } from './constants.js';
-import { setVolume,playPooledSound } from './audioManagment.js';
-import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress, populateSettingsUI,addListenersForSettingsUI } from './settingsManagment.js';
+import { setVolume,playPooledSound } from './audioManagement.js';
+import { loadSettings, loadProgress,saveProgress,saveSettings,updateSettingsFromUI,applyGameSettings,applyGameProgress, populateSettingsUI,addListenersForSettingsUI } from './settingsManagement.js';
 
 
         let debugDraw = false;

@@ -99,10 +99,10 @@ export function loadProgress() {
     // Update game state based on loaded progress
     applyGameProgress();
 }
-// In settingsManagment.js or your main UI script
+// In settingsManagement.js or your main UI script
 
 export function populateSettingsUI() {
-    if (!settings) { // 'settings' is your global settings object from settingsManagment.js
+    if (!settings) { // 'settings' is your global settings object from settingsManagement.js
         console.warn("populateSettingsUI: Settings object is not available.");
         return;
     }

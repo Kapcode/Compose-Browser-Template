@@ -519,8 +519,6 @@ body {
     /* Important for games: ensure the browser doesn't try to do things like "pull-to-refresh"
        or other default touch actions if your game handles all touch. */
     touch-action: none;
-    margin: 0;
-    padding: 0;
 
     /* REMOVE any background-image properties from 'body' if you use #backgroundImageContainer for the image */
 }
@@ -647,11 +645,10 @@ body {
 
     
     </div>
-    </div>
     <!--load in sounds before script-->>
     <audio id="gameOverSound" src="/sounds/gameOver.wav"></audio>
-    <script type="module" src="/audioManagment.js"></script>
-    <script type="module" src="/settingsManagment.js"></script>
+    <script type="module" src="/audioManagement.js"></script>
+    <script type="module" src="/settingsManagement.js"></script>
     <script type="module" src="/main.js"></script>
 </body>
 
