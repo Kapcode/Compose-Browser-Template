@@ -2,8 +2,8 @@
 import { gamePaused, gameStopped, gameStateLogs, timeWhenPauseActuallyStarted } from './main.js';
 
 // --- Game Config / Native Dimensions ---
-export let nativeGameWidth = 1280;
-export let nativeGameHeight = 720;
+export const nativeGameWidth = 1280;
+export const nativeGameHeight = 720;
 export let nativeGameAspectRatio = nativeGameWidth / nativeGameHeight;
 
 // --- Scaling and Offset (Calculated in main.js, stored here) ---
@@ -138,11 +138,3 @@ export function setCloseSettingsButton(el) {
 export function setRotateMessageOverlay(el) {
     rotateMessageOverlay = el;
 }
-
-
-// --- OLD SVG related (Likely not needed with Canvas) ---
-// export let headingHeight = 0;
-// export const gameAreaWidth = 0; // Derived from canvas.width
-// export const gameAreaHeight = 0; // Derived from canvas.height
-// export const baseGroupWidth = 100;
-// export const baseGroupHeight = 50;

@@ -180,6 +180,7 @@ function startGame() {
     playPooledSound('jump', 'sounds/gameOver.wav'); // Assuming this sound ID is defined elsewhere or in HTML
     gamePaused = false;
     if (animationFrameId === null) {
+        resizeCanvasAndCalculateScale();
         hidePauseMenu();
         console.log("Starting new game.");
         score = 0;
@@ -290,7 +291,7 @@ function resumeButtonFunc() {
 }
 
 function initializeGame() {
-    resizeCanvasAndCalculateScale();
+    //resizeCanvasAndCalculateScale();
     loadSettings();
     loadProgress();
     activeGameElements = [];
@@ -624,28 +625,50 @@ function spawnTestRectangle() {
 const LETTERBOX_COLOR = "#333333"; // This could be in globals.js
 
 function drawGameElements(ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.translate(globals.currentOffsetX, globals.currentOffsetY);
-    ctx.scale(globals.currentScale, globals.currentScale);
+    // --- DRAWING PHASE ---
+    if (ctx && canvas) {
+        // === THIS IS WHERE YOUR SNIPPET GOES ===
+        const scaleToUse = globals.sceneState.currentScale;
+        const offsetXToUse = globals.sceneState.currentOffsetX;
+        const offsetYToUse = globals.sceneState.currentOffsetY;
 
-    if (globals.debugDraw) { // Added debugDraw check for border
-        ctx.strokeStyle = 'red';
-        ctx.lineWidth = 2 / globals.currentScale;
-        ctx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
+        if (scaleToUse === undefined || offsetXToUse === undefined || offsetYToUse === undefined || isNaN(scaleToUse) || scaleToUse <= 0) {
+            console.error("[GameLoop Draw] Invalid sceneState transform values. Scale:", scaleToUse, "OffsetX:", offsetXToUse, "OffsetY:", offsetYToUse);
+            // Potentially skip drawing for this frame or try to recover
+        } else {
+            ctx.fillStyle = globals.LETTERBOX_COLOR || '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(offsetXToUse, offsetYToUse);
+            ctx.scale(scaleToUse, scaleToUse); // Corrected typo
+
+            if (globals.debugDraw !== false) {
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2 / scaleToUse;
+                ctx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
+            }
+
+            activeGameElements.forEach(element => {
+                if (element.isActive && typeof element.draw === 'function') {
+                    element.draw(ctx);
+                }
+            });
+            ctx.restore();
+            // drawFixedUI(ctx); // For UI elements not affected by game scale/offset
+        }
+        // =====================================
     }
 
-    activeGameElements.forEach(element => {
-        if (element.isActive && typeof element.draw === 'function') {
-            element.draw(ctx);
-        }
-    });
-    ctx.restore();
     // drawUI(ctx); // If you have separate UI drawing
 }
 
 function resizeCanvasAndCalculateScale() {
-    if (!canvas) return; // Guard against canvas not being ready
+    if (!canvas) {
+        console.error("Canvas element not found in the DOM.");
+        return; // Guard against canvas not being ready
+    }
+
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -674,6 +697,34 @@ function resizeCanvasAndCalculateScale() {
     if (globals.debugDraw) console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${globals.currentScale}, cOffsetX=${globals.currentOffsetX}, cOffsetY=${globals.currentOffsetY}`);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+////DOM ON LOADED EVENT HANDLER//////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('gameArea');
     if (canvas) {
@@ -683,10 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = 1280;// Initial default
         gameAreaViewBoxWidth = canvas.width;
         gameAreaViewBoxHeight = canvas.height;
-
-
-        resizeCanvasAndCalculateScale();
-        window.addEventListener('resize', resizeCanvasAndCalculateScale);
+        window.addEventListener('resize', resizeCanvasAndCalculateScale);//only call resizeCanvasAndCalculateScale on this line!
     } else {
         console.error("CRITICAL: Canvas element 'gameArea' not found in the DOM.");
         return; // Stop further execution if canvas isn't found

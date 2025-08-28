@@ -1,6 +1,5 @@
 // ./assetManager.js
 import * as globals from './globals.js'; // To access SPRITE_SHEET_SRC and potentially set flags
-
 // These will be managed within this module
 let _spriteSheetImage = null;//master-sprite.png';
 let _spriteSheetLoaded = false;
