@@ -77,7 +77,7 @@ export class Sprite extends GameObject {
     update(deltaTime, currentTime, activeGameElements) {
         super.update(deltaTime, currentTime);
         const animDef = ANIMATIONS[this.animationName];
-        console.log("IMAGE_IS_117?"+this.image);//null//TODO NULL//////////////////////////////////////
+        //console.log("IMAGE_IS_117?"+this.image);//null//TODO NULL//////////////////////////////////////
         // **** ADD THIS CRITICAL DEBUGGING ****
         if (!animDef) {
 
@@ -91,16 +91,16 @@ export class Sprite extends GameObject {
             return;
         }
 
-        if(globals.debugDraw)console.log(
+ /*       if(globals.debugDraw)console.log(
             `Sprite Update Pre-FrameFetch DEBUG: Entity: ${this.entityType}, Anim: ${this.animationName}, ` +
             `FrameIndex: ${this.currentFrameIndex}, TotalFrames: ${this.totalFramesInAnimation}, ` +
             `Actual Frames in animDef: ${animDef.frames.length}`
-        );
+        );*/
         // *************************************
 
         const currentFrameDef = animDef.frames[this.currentFrameIndex];
         // Your existing log:
-        if(globals.debugDraw)console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
+        //if(globals.debugDraw)console.log(`ANIOMATION: ${this.animationName} also the frame def: ${currentFrameDef ? 'DEFINED' : 'UNDEFINED'}`);
 
 
         if (!currentFrameDef) {
@@ -172,10 +172,10 @@ export class Sprite extends GameObject {
             // Flip context for left-facing sprite
             ctx.translate(drawX + drawWidth, drawY); // Move origin to where right edge would be
             ctx.scale(-1, 1); // Flip horizontally
-            console.log("IMAGE_IS_"+this.image);
+            //console.log("IMAGE_IS_"+this.image);
             ctx.drawImage(this.image, frame.sx, frame.sy, frame.sWidth, frame.sHeight, 0, 0, drawWidth, drawHeight);
         } else {
-            console.log("IMAGE_IS_thisisTheOffendingCall"+this.image);
+            //console.log("IMAGE_IS_thisisTheOffendingCall"+this.image);
             ctx.drawImage(this.image, frame.sx, frame.sy, frame.sWidth, frame.sHeight, drawX, drawY, drawWidth, drawHeight);
         }
         // DEBUG BOUNDARY CHECK:

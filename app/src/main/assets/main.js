@@ -145,6 +145,7 @@ function displayAssetLoadError(message) {
 function handleGameResumeAfterSystemPause() {
     const timeNow = performance.now();
     console.log("Game resuming after system interruption (e.g., tab became visible).");
+   let lastTime = performance.now(); console.log("[gameLoop RESUME] lastTime reset to:", lastTime);
 
     lastTimestamp = timeNow;
     gameTimeAccumulator = 0;
@@ -171,11 +172,8 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function setPauseState(pause) {
-    if (gameState.gamePaused) {
-        if (gameStateLogs) console.warn("Game is already in the requested pause state:", pause);
-        return;
-    }
-    gameState.setGamePaused(true);
+
+    gameState.setGamePaused(pause);
 
     if (pause) {
 
@@ -269,6 +267,7 @@ function gameLogic() {
 }
 
 function startGame() {
+    showGameControlsOverlay();
     console.log("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
 
     hideWelcomeScreen(); // Hide the menu/welcome screen
@@ -370,7 +369,9 @@ function updateGameElements(deltaTime, currentTime) {
 }
 
 
-
+function removeInputListeners() {
+    input.removeInputListeners();
+}
 
 
 function stopGame() {
@@ -383,7 +384,7 @@ function stopGame() {
         console.log("Game loop stopped.");
     }
 
-    removeInputListeners();
+    removeInputListeners();//where is this//todo remove input listeners
 
     activeGameElements.forEach(elem => {
         if (elem.element) {
@@ -401,7 +402,7 @@ function pauseGame() {
         console.log("Game is not running, cannot pause.");
         return;
     }
-    if (gamePaused) {
+    if (gameState.gamePaused) {
         console.log("Game is already paused.");
         return;
     }
@@ -416,6 +417,12 @@ function pauseGame() {
         globals.pauseMenuOverlay.style.display = 'flex';
     }
 }
+function showGameControlsOverlay() {//has pause button... opens menu with settings/quite to menu
+    document.getElementById('gameControlsOverlay').classList.add('visible');
+}
+function hideGameControlsOverlay() {
+    document.getElementById('gameControlsOverlay').classList.remove('visible');
+}
 
 function hidePauseMenu() {
     if (globals.pauseMenuOverlay) {
@@ -424,7 +431,7 @@ function hidePauseMenu() {
 }
 
 function resumeButtonFunc() {
-    if (gamePaused) {
+    if (gameState.gamePaused) {
         console.log("Resuming game from pause.");
         setPauseState(false); // Centralize unpause logic
         // The following lines are now handled by setPauseState(false)
@@ -443,23 +450,7 @@ function resumeButtonFunc() {
     }
 }
 
-function showGameControls() {
-    if (globals.controlsOverlay) {
-        globals.controlsOverlay.style.visibility = 'visible';
-        globals.controlsOverlay.style.display = 'block';
-    } else {
-        console.error("Controls overlay not found (expected in globals).");
-    }
-}
 
-function hideGameControls() {
-    if (globals.controlsOverlay) {
-        globals.controlsOverlay.style.visibility = 'hidden';
-        globals.controlsOverlay.style.display = 'none';
-    } else {
-        console.error("Controls overlay not found (expected in globals).");
-    }
-}
 function showWelcomeScreen() {
     if (uiElements.welcomeScreen) {
         uiElements.welcomeScreen.style.display = 'flex'; // Or 'block', match your CSS
@@ -1018,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Starting new game from Start Button.");
                 if (welcomeScreen) welcomeScreen.style.display = 'none'; // Assuming welcomeScreen is the overall welcome overlay
                 if (welcomeBackgroundImageContainer) welcomeBackgroundImageContainer.style.display = 'none';
-                showGameControls();
+                showGameControlsOverlay();
                 hidePauseMenu();
                 startGame();
             }
@@ -1027,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (pauseButton) {
         pauseButton.addEventListener('click', () => {
-            if (animationFrameId && !gamePaused) {
+            if (animationFrameId && !gameState.gamePaused) {
                 console.log("Pause button clicked, pausing game.");
                 pauseGame();
             }
@@ -1042,10 +1033,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (quitToMenuButton) {
         quitToMenuButton.addEventListener('click', () => {
-            if (gamePaused) { // Typically quit from a paused state
+            if (gameState.gamePaused) { // Typically quit from a paused state
                 console.log("Quit to menu button clicked, stopping game.");
                 stopGame();
-                hideGameControls();
+                hideGameControlsOverlay();
                 hidePauseMenu();
                 if (welcomeScreen) welcomeScreen.style.display = 'block'; // Show welcome screen overlay
                 if (welcomeBackgroundImageContainer) welcomeBackgroundImageContainer.style.display = 'block';

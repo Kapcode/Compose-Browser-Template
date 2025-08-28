@@ -22,13 +22,13 @@ export class EnemyPatrol extends Character {
         }
 
         const currentSpriteNativeWidth = currentFrameDef.sWidth * this.spriteScale;
-        if (globals.debugDraw) console.log(
+/*        if (globals.debugDraw) console.log(
             `Boundary Check DEBUG: Chef X: ${this.x.toFixed(2)}, ` +
             `SpriteNativeWidth: ${currentSpriteNativeWidth.toFixed(2)}, ` +
             `CalculatedRightEdge: ${(this.x + currentSpriteNativeWidth).toFixed(2)}, ` +
             `patrolMinX: ${this.patrolMinX}, patrolMaxX: ${this.patrolMaxX}, ` +
             `sWidth: ${currentFrameDef.sWidth}, spriteScale: ${this.spriteScale}`
-        );
+        );*/
 
         if (this.direction.x > 0 && (this.x + currentSpriteNativeWidth) >= this.patrolMaxX) {
             this.x = this.patrolMaxX - currentSpriteNativeWidth;
