@@ -1,14 +1,15 @@
 import { Sprite } from './Sprite.js';
 import * as globals from './globals.js';
-import { getSpriteSheetImage } from './assetManager.js';
+import * as assetManager from './assetManager.js';
 export class Character extends Sprite {
     constructor(x, y, animationName, spriteScale, health, speed) {
         super(x, y, animationName, spriteScale);
         this.entityType = "character"; // More specific
         this.health = health;
         this.speed = speed;
-        this.image = getSpriteSheetImage(); // <--- USE THE IMPORTED FUNCTION
+        //this.image = assetManager.getSpriteSheetImage(); // <--- USE THE IMPORTED FUNCTION
         this.direction = { x: 0, y: 0 };
+        console.log(`[Character CONSTRUCTOR - ${this.animationName}] this.image after super():`, this.image);
     }
 
     update(deltaTime, currentTime, activeGameElements) {

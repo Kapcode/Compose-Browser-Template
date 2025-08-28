@@ -1,5 +1,6 @@
 import * as globals from './globals.js'; // Assuming globals.js now correctly defines its exports
 import * as assetManager from './assetManager.js';
+import * as input from './input.js';
 import { GameObject } from './GameObject.js';
 import { Sprite } from './Sprite.js';
 import { Player } from './Player.js';
@@ -7,8 +8,7 @@ import { Character } from './Character.js';
 import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagement.js';
 import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
-import { initInput, isActionActive, isKeyDown, removeInputListeners } from './input.js'; // Added removeInputListeners
-import { pPickle1, updatePickleMovement, createPicklePlayerInstance } from './PickleMan.js';
+import { pPickle1, createPicklePlayerInstance } from './PickleMan.js';
 import { eChef1, createPatrolingChef } from './ChefEnemy.js';
 import * as gameState from './gameState.js'
 // ---- IMMEDIATELY LOG THESE VALUES ----
@@ -54,8 +54,9 @@ export let score = 0;
 
 
 //assets/////////////////////////////////////////////////////
-let assetsToLoad = 0;
-let assetsLoaded = 0;
+let assetsToLoadCount = 0; // <<<< DECLARED HERE (Correct) ..PalmFace
+let assetsSuccessfullyLoadedCount = 0;
+let assetsFailedToLoadCount = 0;
 
 function assetLoaded(err, key) { // A general callback for each loaded asset
     if (err) {
@@ -69,10 +70,77 @@ function assetLoaded(err, key) { // A general callback for each loaded asset
     }
 }
 
+// UI elements cache
+let uiElements = {
+    welcomeScreen: null,
+    startGameButton: null,
+    loadingMessage: null,
+    gameLoadError: null
+    // Add other UI elements if you have them, e.g., scoreDisplay, healthBar
+};
 
+// main.js (continued)
+// assetManager.loadImage will execute for each asset. .. call this every time you load an asset
+function singleAssetProcessed(key, error, image) { // key, error, image are provided by assetManager.loadImage
+    console.log(`[Main.js] singleAssetProcessed received for key: "${key}". Error: ${error ? error.message : 'No Error'}`);
 
+    if (error) {
+        assetsFailedToLoadCount++;
+        console.error(`[Main.js] Failed to load asset: "${key}". Error: ${error.message}. Total FAILED: ${assetsFailedToLoadCount}`);
+        // Optionally, update UI to show specific asset failure if you want that detail
+    } else {
+        assetsSuccessfullyLoadedCount++;
+        console.log(`[Main.js] Successfully loaded asset: "${key}". Image object:`, image, `Total SUCCESSFUL: ${assetsSuccessfullyLoadedCount}`);
+    }
 
+    // Check if ALL assets (from the manifest) have been processed
+    if ((assetsSuccessfullyLoadedCount + assetsFailedToLoadCount) === assetsToLoadCount) {
+        console.log(`[Main.js] All ${assetsToLoadCount} assets processed. Successful: ${assetsSuccessfullyLoadedCount}, Failed: ${assetsFailedToLoadCount}`);
+        proceedToGameStartConditionCheck(); // Now decide what to do (enable start button or show error)
+    }
+}
 
+//This function runs after all assets in the manifest have been attempted. It decides if the game can proceed.
+//runs after every asset has been loaded, can the game start?
+function proceedToGameStartConditionCheck() {
+    if (uiElements.loadingMessage) {
+        uiElements.loadingMessage.style.display = 'none'; // Hide "Loading assets..." message
+    }
+
+    if (assetsFailedToLoadCount > 0) {
+        // Handle critical asset load failure
+        const errorMessage = `Failed to load ${assetsFailedToLoadCount} essential game file(s). Please refresh to try again.`;
+        console.error(`CRITICAL: ${errorMessage}`);
+        displayAssetLoadError(errorMessage); // Show this error on the page
+        if (uiElements.startGameButton) {
+            uiElements.startGameButton.disabled = true; // Keep start button disabled
+            uiElements.startGameButton.textContent = "Error Loading";
+        }
+    } else {
+        // ALL essential assets loaded SUCCESSFULLY
+        console.log("All essential assets loaded successfully! Ready for user to start.");
+        if (uiElements.gameLoadError) {
+            uiElements.gameLoadError.style.display = 'none'; // Hide any previous error message
+        }
+        showWelcomeScreen(); // Make sure your welcome screen with the start button is visible
+        if (uiElements.startGameButton) {
+            uiElements.startGameButton.disabled = false; // ENABLE the start button
+            uiElements.startGameButton.textContent = "Start Game"; // Set appropriate text
+            console.log("Start button should now be enabled.");
+        }
+    }
+}
+
+function displayAssetLoadError(message) {
+    if (uiElements.gameLoadError) {
+        uiElements.gameLoadError.textContent = message;
+        uiElements.gameLoadError.style.display = 'block'; // Or 'flex', depending on your CSS
+        console.error("DISPLAYING ASSET LOAD ERROR ON PAGE:", message);
+    } else {
+        console.error("Could not display asset load error on page, uiElements.gameLoadError not found. Message:", message);
+        alert("Error loading game assets: " + message); // Fallback
+    }
+}
 
 function handleGameResumeAfterSystemPause() {
     const timeNow = performance.now();
@@ -124,18 +192,7 @@ function setPauseState(pause) {
     }
 }
 
-function updateGameElements(deltaTime, currentTime) {
-    let elementsToKeep = [];
-    activeGameElements.forEach(element => {
-        if (element.isActive) {
-            element.update(deltaTime, currentTime, activeGameElements);
-            if (element.isActive) {
-                elementsToKeep.push(element);
-            }
-        }
-    });
-    activeGameElements = elementsToKeep;
-}
+
 
 const MAX_DELTA_TIME = 0.01666666667; // Approx 60 FPS fixed time step
 
@@ -212,6 +269,12 @@ function gameLogic() {
 }
 
 function startGame() {
+    console.log("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
+
+    hideWelcomeScreen(); // Hide the menu/welcome screen
+    if (uiElements.gameLoadError) { // Hide any error messages if they were shown
+        uiElements.gameLoadError.style.display = 'none';
+    }
 
     playPooledSound('jump', 'sounds/gameOver.wav'); // Assuming this sound ID is defined elsewhere or in HTML
     gameState.setGamePaused(false);
@@ -221,6 +284,7 @@ function startGame() {
         console.log("Starting new game.");
         score = 0;
         initializeGame();
+        input.initInput();
         console.log("Starting game loop.");
         lastTimestamp = performance.now();
         animationFrameId = requestAnimationFrame((timestamp) => gameLoop(timestamp)); // Removed liveGameArea argument
@@ -233,10 +297,19 @@ function startGame() {
 
 
 
+    console.log(`%c[Main.js startGame] AFTER initializeGame, pPickle1.image is:`, 'color: teal; font-weight: bold;', pPickle1 ? pPickle1.image : "pPickle1 is null");
 
-    createPicklePlayerInstance(100,100,"pickle_player_idle",globals.default_scale);//x, y, animationName, spriteScale
+    createPicklePlayerInstance(100,100,"pickle_player_idle",globals.default_scale,100,100);//x, y, animationName, spriteScale
 
+    initializeGame(pPickle1); // Pass playerInstance if initializeGame needs it to add to activeGameElements
 
+    // --- END OF YOUR EXISTING GAME INITIALIZATION ---
+
+    console.log(`[Main.js startGame] Game initialized. Starting game loop.`);
+    if (!animationFrameId) {
+        lastTime = performance.now();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
 
     createPatrolingChef(200,
         globals.nativeGameHeight - 150,
@@ -251,7 +324,7 @@ function startGame() {
         // You might need to set properties on pPickle1 if not set in constructor,
         // e.g., pPickle1.speed = 200; pPickle1.width = 50; pPickle1.height = 80;
         // Make sure these properties exist on the pPickle1 object/class instance.
-        if (typeof pPickle1.speed === 'undefined') pPickle1.speed = 100; // Default speed
+        //if (typeof pPickle1.speed === 'undefined') pPickle1.speed = 100; // Default speed
         //if (typeof pPickle1.width === 'undefined') pPickle1.width = 32;   // Example default width
         //if (typeof pPickle1.height === 'undefined') pPickle1.height = 48; // Example default height
         activeGameElements.push(pPickle1);
@@ -261,6 +334,44 @@ function startGame() {
     }
 
 }
+
+
+
+
+
+
+
+// You'll also need initializeGame and gameLoop from your existing code
+// For example:
+function initializeGame(player) { // Modified to accept player
+    loadSettings();
+    loadProgress();
+    lastSpawnTime = performance.now();
+    activeGameElements = []; // Clear previous elements
+    if (player) {
+        activeGameElements.push(player); // Add the newly created player
+    }
+    // Add other initial game elements like enemies if they are created in startGame
+    // e.g., if eChef1 is created in startGame: activeGameElements.push(eChef1);
+    console.log("[Main.js] initializeGame done. Active elements:", activeGameElements);
+}
+
+function updateGameElements(deltaTime, currentTime) {
+    let elementsToKeep = [];
+    activeGameElements.forEach(element => {
+        if (element.isActive) {
+            element.update(deltaTime, currentTime, activeGameElements);
+            if (element.isActive) {
+                elementsToKeep.push(element);
+            }
+        }
+    });
+    activeGameElements = elementsToKeep;
+}
+
+
+
+
 
 function stopGame() {
     if (animationFrameId) {
@@ -332,14 +443,6 @@ function resumeButtonFunc() {
     }
 }
 
-function initializeGame() {
-    //resizeCanvasAndCalculateScale();
-    loadSettings();
-    loadProgress();
-    activeGameElements = [];
-    lastSpawnTime = performance.now();
-}
-
 function showGameControls() {
     if (globals.controlsOverlay) {
         globals.controlsOverlay.style.visibility = 'visible';
@@ -357,22 +460,25 @@ function hideGameControls() {
         console.error("Controls overlay not found (expected in globals).");
     }
 }
-
 function showWelcomeScreen() {
-    if (globals.welcomeBackgroundImageContainer) { // Assuming welcomeScreen is the container
-        globals.welcomeBackgroundImageContainer.style.display = 'block';
+    if (uiElements.welcomeScreen) {
+        uiElements.welcomeScreen.style.display = 'flex'; // Or 'block', match your CSS
+        console.log("Showing welcome screen.");
     } else {
-        console.error("Welcome screen/background container not found (expected in globals).");
+        console.warn("Welcome screen UI element not found.");
     }
 }
 
 function hideWelcomeScreen() {
-    if (globals.welcomeBackgroundImageContainer) {
-        globals.welcomeBackgroundImageContainer.style.display = 'none';
+    if (uiElements.welcomeScreen) {
+        uiElements.welcomeScreen.style.display = 'none';
+        console.log("Hiding welcome screen.");
     } else {
-        console.error("Welcome screen/background container not found (expected in globals).");
+        console.warn("Welcome screen UI element not found.");
     }
 }
+
+
 
 function handleOrientationChange() {
     let currentOrientation = '';
@@ -621,9 +727,9 @@ function spawnTestRectangle() {
 
 const LETTERBOX_COLOR = "#333333"; // This could be in globals.js
 
-function drawGameElements(ctx) {
+function drawGameElements(passedCtx) {
     // --- DRAWING PHASE ---
-    if (ctx && canvas) {
+    if (passedCtx && canvas) {
         // === THIS IS WHERE YOUR SNIPPET GOES ===
         const scaleToUse = globals.sceneState.currentScale;
         const offsetXToUse = globals.sceneState.currentOffsetX;
@@ -633,31 +739,31 @@ function drawGameElements(ctx) {
             console.error("[GameLoop Draw] Invalid sceneState transform values. Scale:", scaleToUse, "OffsetX:", offsetXToUse, "OffsetY:", offsetYToUse);
             // Potentially skip drawing for this frame or try to recover
         } else {
-            ctx.fillStyle = globals.LETTERBOX_COLOR || '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            passedCtx.fillStyle = globals.LETTERBOX_COLOR || '#000';
+            passedCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.save();
-            ctx.translate(offsetXToUse, offsetYToUse);
-            ctx.scale(scaleToUse, scaleToUse); // Corrected typo
+            passedCtx.save();
+            passedCtx.translate(offsetXToUse, offsetYToUse);
+            passedCtx.scale(scaleToUse, scaleToUse); // Corrected typo
 
             if (globals.debugDraw !== false) {
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2 / scaleToUse;
-                ctx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
+                passedCtx.strokeStyle = 'red';
+                passedCtx.lineWidth = 2 / scaleToUse;
+                passedCtx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
             }
 
             activeGameElements.forEach(element => {
                 if (element.isActive && typeof element.draw === 'function') {
-                    element.draw(ctx);
+                    element.draw(passedCtx);
                 }
             });
-            ctx.restore();
-            // drawFixedUI(ctx); // For UI elements not affected by game scale/offset
+            passedCtx.restore();
+            // drawFixedUI(passedCtx); // For UI elements not affected by game scale/offset
         }
         // =====================================
     }
 
-    // drawUI(ctx); // If you have separate UI drawing
+    // drawUI(passedCtx); // If you have separate UI drawing
 }
 
 function resizeCanvasAndCalculateScale() {
@@ -723,6 +829,7 @@ function resizeCanvasAndCalculateScale() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+
     canvas = document.getElementById('gameArea');
     if (canvas) {
         ctx = canvas.getContext('2d');
@@ -737,9 +844,54 @@ document.addEventListener('DOMContentLoaded', () => {
         return; // Stop further execution if canvas isn't found
     }
 
+    //welcome UI
+
+
+    // Step 1: GET the element from the HTML document
+    const welcomeScreenElement = document.getElementById('welcomeScreen');
+    // Step 2: STORE the reference in your uiElements object
+    uiElements.welcomeScreen = welcomeScreenElement;
+    console.log("Attempting to get 'welcomeScreen'. Result:", uiElements.welcomeScreen);
+
+
+    uiElements.startGameButton = document.getElementById('startGameButton');
+    console.log("Attempting to get 'startGameButton'. Result:", uiElements.startGameButton);
+
+    uiElements.loadingMessage = document.getElementById('loadingMessage');
+    console.log("Attempting to get 'loadingMessage'. Result:", uiElements.loadingMessage);
+
+    uiElements.gameLoadError = document.getElementById('gameLoadError');
+    console.log("Attempting to get 'gameLoadError'. Result:", uiElements.gameLoadError);
+
+
+    // Now you can check if they were found and use them:
+    if (uiElements.startGameButton) {
+        uiElements.startGameButton.disabled = true;
+        uiElements.startGameButton.textContent = "Loading...";
+        uiElements.startGameButton.addEventListener('click', () => {
+            console.log("Start Game button was clicked by the user!");
+            startGame();
+        });
+    } else {
+        console.error("Start Game Button ('startGameButton') was NOT found in the DOM!");
+    }
+
+    if (uiElements.loadingMessage) {
+        uiElements.loadingMessage.style.display = 'block';
+    } else {
+        console.warn("Loading message UI element ('loadingMessage') not found.");
+    }
+
+    if (uiElements.welcomeScreen) {
+        showWelcomeScreen(); // Call your function that uses uiElements.welcomeScreen
+    } else {
+        console.warn("Welcome screen UI element ('welcomeScreen') was not found, so showWelcomeScreen() might not work as expected.");
+    }
+
+
 
     //input
-    //initInput();
+
 
     // --- Initialize references to UI elements (now that DOM is ready) ---
     // These now assign to the properties of the imported 'globals' object.
@@ -755,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let welcomeBackgroundImageContainer = document.getElementById('welcomeBackgroundImageContainer');
     let controlsOverlay = document.getElementById('gameControlsOverlay');
     let pauseButton = document.getElementById('pauseButton');
-    let welcomeScreen = document.getElementById('welcomeScreenOverlay'); // This is the overlay itself
+    let welcomeScreen = document.getElementById('welcomeScreen'); // This is the overlay itself
     let pauseMenuOverlay = document.getElementById('pauseMenuOverlay');
     let resumeButton = document.getElementById('resumeButton');
     let startButton = document.getElementById('startGameButton');
@@ -930,38 +1082,53 @@ document.addEventListener('DOMContentLoaded', () => {
     initOrientationDetection();
     // resizeCanvasAndCalculateScale(); // Already called after canvas init
 
-    // Define what you need to load
+
+    //SETUP ASSET LOADING
+
+
+
+
+    // --- ASSET LOADING ---
     const assetsManifest = [
         { key: globals.MASTER_SPRITE_SHEET_KEY, path: globals.SPRITE_SHEET_PATH },
-        // { key: "another_image", path: "path/to/another.png" }, // If you have more
-        // { key: "background_main", path: "path/to/background.jpg" },
+        // Add other assets like:
+        // { key: "enemy_spritesheet", path: "images/enemy_sprites.png" },
+        // { key: "background_level1", path: "images/backgrounds/level1.jpg" },
     ];
+    console.log("[Main.js DOMContentLoaded] Constructed assetsManifest:", JSON.stringify(assetsManifest, null, 2));
 
-    assetsToLoad = assetsManifest.length;
-
-    if (assetsToLoad === 0) {
-        startGame(); // No assets to load, proceed directly
-        return;
+    if (!assetsManifest || assetsManifest.length === 0) {
+        console.warn("Asset manifest is empty or undefined. Proceeding as if all assets are loaded.");
+        assetsToLoadCount = 0; // Ensure counters are zero
+        assetsSuccessfullyLoadedCount = 0;
+        assetsFailedToLoadCount = 0;
+        proceedToGameStartConditionCheck(); // This will enable the start button
+        return; // Skip asset loading loop
     }
 
-    assetsManifest.forEach(asset => {
-        assetManager.loadImage(asset.key, asset.path, (err, img) => {
+    assetsToLoadCount = assetsManifest.length;
+    assetsSuccessfullyLoadedCount = 0; // Reset counters
+    assetsFailedToLoadCount = 0;
 
-            console.log(`Asset loaded: ${asset.key}`);
-            console.log(asset.path);
-            if (err) {
-                console.error(`Failed to load asset: ${asset.key}`, err);
-                return;
+    if (assetsToLoadCount > 0) {
+        assetsManifest.forEach(asset => {
+            console.log(`[Main.js DOMContentLoaded] Requesting asset load for: Key="${asset.key}", Path="${asset.path}"`);
+            if (typeof asset.key === 'undefined' || typeof asset.path === 'undefined' || asset.path === null) {
+                const errorMessage = `Asset in manifest has undefined/null key or path: Key="${asset.key}", Path="${asset.path}"`;
+                console.error(`%c${errorMessage}`, 'color:red; font-weight:bold;');
+                // Treat this as an immediate failure for this asset entry
+                singleAssetProcessed(asset.key || "unknown_asset_key", new Error(errorMessage), null);
+            } else {
+                assetManager.loadImage(asset.key, asset.path, singleAssetProcessed);
             }
-
-            // This inner callback is specific to assetManager.loadImage
-            // You can do something here if needed, or rely on a more general counter.
-            assetLoaded(err, asset.key); // Call your general counter
         });
+    } else {
+        // Should have been caught by the earlier check, but as a safeguard
+        console.log("[Main.js DOMContentLoaded] No assets to load from manifest. Proceeding.");
+        proceedToGameStartConditionCheck();
+    }
 
-        // Now it's safe to initialize parts of the game that depend on the sprite sheet
-        // For example, if startGame() spawns sprites:
-        // showWelcomeScreen(); // Or whatever your next step is
-        // Or if you have a "Start Game" button, its click handler can now proceed to startGame knowing assets are ready.
-    });
+
+
+
 });

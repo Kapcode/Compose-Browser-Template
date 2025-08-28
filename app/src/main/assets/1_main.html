@@ -535,32 +535,24 @@
 
 <body>
 
+
     <div id="gameWrapper" class="game-wrapper">
+        <div id="loadingMessage" style="display: none;">Loading game assets...</div>
+        <div id="gameLoadError" style="display: none; color: red;"></div>
+
+        <div id="welcomeScreen" style="display: none; /* Initially hidden or shown via JS */">
+            <h1>My Awesome Game</h1>
+            <button id="startGameButton" disabled>Loading Assets...</button>
+        </div>
         <canvas id="gameArea" ></canvas>
     </div>
           <!-- Pause/Stop Button Overlay (directly inside game-wrapper) -->
-        <div id="gameControlsOverlay" class="game-controls-overlay">
+        <div id="gameControlsOverlay" class="game-controls-overlay" style="display: flex;">
             <button id="pauseButton">Pause</button>
-            
             <!-- Add other controls if needed -->
         </div>
         <!-- Welcome Screen Overlay (initially hidden) -->
-         <div id="welcomeBackgroundImageContainer">
-        <!-- This is where your background image will be set,
-             or you could set it on the body or a specific wrapper div -->
-             <img src="/images/NiceBurgerTruckSvg.svg" alt="2d_pickle_rocket_wit_straight" >
-    
 
-            <div id="welcomeScreenOverlay" class="screen-overlay">
-                <div class="welcome-content content-box">
-                    <h1>Game Title</h1>
-                    <p>A short, catchy tagline!</p>
-                    <button id="startGameButton">Start Game</button>
-                    <button id="settingsButtonWelcome">Settings</button>
-                    <button id="highScoresButton">High Scores</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Pause Menu Overlay (initially hidden) -->
         <div id="pauseMenuOverlay" class="pause-menu-overlay" style="display: none;">
@@ -615,9 +607,6 @@
     </div>
     <!--load in sounds before script-->>
     <audio id="gameOverSound" src="/sounds/gameOver.wav"></audio>
-    <script type="module" src="/tileMapManagement.js"></script>
-    <script type="module" src="/audioManagement.js"></script>
-    <script type="module" src="/settingsManagement.js"></script>
     <script type="module" src="/main.js"></script>
 </body>
 

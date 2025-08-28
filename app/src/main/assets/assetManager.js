@@ -19,56 +19,58 @@ export function isSpriteSheetLoaded(key) {
  * @param {string} path - The path to the image file (e.g., globals.SPRITE_SHEET_PATH).
  * @param {function} [callback] - Optional callback function to execute when this specific image is loaded.
  */
-export function loadImage(key, path, callback) {
-    if (_loadedImages[key] && _loadedImages[key].complete && _loadedImages[key].naturalWidth > 0) {
-        console.log(`Image with key "${key}" already loaded.`);
-        if (callback) callback(null, _loadedImages[key]); // Pass null for error, then image
-        return;
-    }
-
-    // If already loading this key, add callback and return
-    if (_imageLoadCallbacks[key]) {
-        if (callback) _imageLoadCallbacks[key].push(callback);
-        console.log(`Image with key "${key}" is currently being loaded. Callback added.`);
-        return;
-    }
-
+export function loadImage(key, path, callbackFromMain) { // callbackFromMain is singleAssetProcessed
+    console.log(`[AssetManager] loadImage CALLED. Key: "${key}", Path: "${path}"`);
     const img = new Image();
-    _loadedImages[key] = img; // Store it immediately so isSpriteSheetLoaded can potentially see it
-    _imageLoadCallbacks[key] = callback ? [callback] : []; // Initialize callbacks array
-
-    console.log(`Starting image load for key "${key}" from: ${path}`);
 
     img.onload = () => {
-        console.log(`Image loaded successfully: key "${key}" from ${path}`);
-        const callbacks = _imageLoadCallbacks[key];
-        if (callbacks) {
-            callbacks.forEach(cb => cb(null, img)); // Call each callback for this key
+        console.log(`[AssetManager] SUCCESS for key "${key}". Path: "${path}"`);
+        _loadedImages[key] = img;
+        if (callbackFromMain) {
+            callbackFromMain(key, null, img); // key, NO error, the image
         }
-        delete _imageLoadCallbacks[key]; // Clear callbacks for this key
     };
 
-    img.onerror = () => {
-        console.error(`Failed to load image: key "${key}" from ${path}`);
-        delete _loadedImages[key]; // Remove the failed image placeholder
-        const callbacks = _imageLoadCallbacks[key];
-        if (callbacks) {
-            const err = new Error(`Failed to load image ${key}`);
-            callbacks.forEach(cb => cb(err, null)); // Call callbacks with an error
+    img.onerror = (errorEvent) => { // errorEvent might give more info
+        const error = new Error(`Failed to load image at path: ${path}`);
+        console.error(`[AssetManager] ERROR for key "${key}". Path: "${path}"`, error);
+        // _loadedImages[key] = null; // Or some placeholder for a failed image if needed
+        if (callbackFromMain) {
+            callbackFromMain(key, error, null); // key, THE error, NO image
         }
-        delete _imageLoadCallbacks[key];
     };
 
+    if (!path) {
+        const error = new Error(`Path is undefined/null for key "${key}"`);
+        console.error(`[AssetManager] PRE-LOAD ERROR for key "${key}"`, error);
+        if (callbackFromMain) {
+            callbackFromMain(key, error, null); // Call callback immediately with error
+        }
+        return; // Don't try to set img.src
+    }
     img.src = path;
 }
 
-export function getSpriteSheetImage(key) { // Or just getImage(key)
-    const img = _loadedImages[key]; // Assuming _loadedImages stores your loaded image objects
-    if (img && img.complete && img.naturalWidth > 0) {
-        return img;
+
+// assetManager.js
+export function getSpriteSheetImage(key) {
+    console.log(`[AssetManager] getSpriteSheetImage attempting to get key: "${key}"`);
+    const img = _loadedImages[key];
+
+    if (!img) {
+        console.warn(`[AssetManager] getSpriteSheetImage: Image NOT FOUND in _loadedImages for key "${key}". Returning null.`);
+        return null;
     }
-    // Optional: A warning if you try to get an image that isn't ready or doesn't exist.
-    // Be careful with this, as it can be noisy if you check before loading is guaranteed.
-    // console.warn(`getSpriteSheetImage: Image for key '${key}' not found, not fully loaded, or is invalid.`);
-    return null;
+
+    // Log the state of the found image
+    console.log(`[AssetManager] getSpriteSheetImage: Found entry for key "${key}". Image object:`, img);
+    console.log(`[AssetManager] Image properties: complete=${img.complete}, naturalWidth=${img.naturalWidth}, naturalHeight=${img.naturalHeight}, src=${img.src}`);
+
+    if (img.complete && img.naturalWidth > 0) { // Check if it's truly loaded and valid
+        console.log(`[AssetManager] getSpriteSheetImage: Image for key "${key}" is COMPLETE and VALID. Returning image.`);
+        return img;
+    } else {
+        console.warn(`[AssetManager] getSpriteSheetImage: Image for key "${key}" found but NOT COMPLETE or NOT VALID (naturalWidth=0). complete=${img.complete}, naturalWidth=${img.naturalWidth}. Returning null.`);
+        return null;
+    }
 }

@@ -1,120 +1,83 @@
 import { GameObject } from './GameObject.js';
 import * as globals from './globals.js';
 import { ANIMATIONS } from './globals.js';
-import { getSpriteSheetImage } from './assetManager.js';
+import * as assetManager from './assetManager.js';
 import {ctx} from './main.js';
 export class Sprite extends GameObject {
-    constructor(x, y, animationName, spriteScale = 1.0) {
-        const initialAnimDef = ANIMATIONS[animationName];
-        const initialFrame = initialAnimDef.frames[0];
+    constructor(x, y, animationName, spriteScale = 1.0,speed) {
+        // 1. Get animDef and initialFrame FIRST
+        const animDef = globals.ANIMATIONS[animationName];
 
-        super(x, y, initialFrame.sWidth * spriteScale, initialFrame.sHeight * spriteScale);
-        this.animationName = animationName;
-        const animDef = ANIMATIONS[animationName];
-
-        // Width/height from sprite frame, scaled by spriteScale for native size
-
-        this.type = "sprite";
-        // Instead of a global 'spriteSheetImage', get it from the assetManager
-        const keyForSpriteSheet = animDef.spriteSheetKey; // This will be "master_spritesheet"
-        // This function should look up the already loaded image using the key
-        this.image = getSpriteSheetImage(keyForSpriteSheet);
-
-        this.currentFrameIndex = 0;
-        this.totalFramesInAnimation = initialAnimDef.frames.length;
-        this.animationLoop = initialAnimDef.loop !== undefined ? initialAnimDef.loop : true;
-        this.currentFrameDuration = initialFrame.duration || initialAnimDef.defaultAnimationSpeed || 100;
-        this.lastFrameTime = 0;
-        this.spriteScale = spriteScale;
-        this.facingDirection = 1; // 1 for right, -1 for left
-
-        // Inside the CONSTRUCTOR of your Sprite class (or Player, if applicable)
-        // constructor(x, y, animationName, spriteScale) {
-        console.log(`[SPRITE CONSTRUCTOR] Called for: animationName = "${animationName}"`);
-
-        // 1. Check ANIMATIONS global immediately
-        console.log("[SPRITE CONSTRUCTOR] Global ANIMATIONS object:", ANIMATIONS); // Log the whole thing
-        if (!ANIMATIONS) {
-            console.error("[SPRITE CONSTRUCTOR] CRITICAL: Global ANIMATIONS object is undefined/null!");
-            this.image = null;
-            return; // Or handle error
-        }
-
-        console.log("IMAGE_IS_"+this.image);
-        console.log("IMAGE_IS_"+this.image);
-        console.log(`[SPRITE CONSTRUCTOR] animDef for "${animationName}":`, animDef);
-
-        if (!animDef) {
-
-            console.error(`[SPRITE CONSTRUCTOR] No animDef found for "${animationName}". Setting image to null.`);
-            this.image = null; // This is a likely path to your problem
-            // ... any other setup before returning or erroring ...
-            this.currentFrameIndex = 0; // Initialize to prevent further errors if draw is called
+        // 2. Critical check for animDef and its frames BEFORE trying to use them
+        if (!animDef || !animDef.frames || animDef.frames.length === 0) {
+            console.error(`[FATAL SPRITE CONSTRUCTOR] Invalid animDef or no frames for "${animationName}". Cannot determine initial dimensions.`);
+            // Call super with default/safe values (0 width/height)
+            super(x, y, 0, 0);
+            this.animationName = animationName; // Still store this
+            this.image = null; // Image will definitely fail or be wrong
+            this.isActive = false; // Mark as inactive
+            // Initialize other properties to prevent cascading errors
+            this.currentFrameIndex = 0;
             this.totalFramesInAnimation = 0;
-            return; // Important to stop further processing if animDef is missing
+            this.spriteSheetKey = globals.MASTER_SPRITE_SHEET_KEY; // Default
+            this.spriteScale = spriteScale;
+            this.facingDirection = 1;
+            this.speed=speed;
+            // Consider throwing an error here or having a more robust way to signal failed construction
+            return; // Stop further construction if animDef is unusable
         }
-        console.log("IMAGE_IS_"+this.image);
-        // Assuming animDef should have a spriteSheetKey that getSpriteSheetImage uses
-        const sheetKey = animDef.spriteSheetKey; // Or whatever property holds the key
-        console.log(`[SPRITE CONSTRUCTOR] Attempting to get image with sheetKey: "${sheetKey}" from animDef.`);
 
-        if (!sheetKey) {
-            console.error(`[SPRITE CONSTRUCTOR] animDef for "${animationName}" is missing a spriteSheetKey. Setting image to null.`);
+        const initialFrame = animDef.frames[0]; // Now it's safe to get initialFrame
 
-            this.image = null;
-            // ... other setup before returning ...
-            //return;
+        // 3. Now call super() using initialFrame properties
+        super(x, y, initialFrame.sWidth * spriteScale, initialFrame.sHeight * spriteScale,speed);
+
+        // 4. Proceed with the rest of the constructor
+        this.animationName = animationName;
+        this.type = "sprite"; // From your previous code
+
+        this.spriteSheetKey = animDef.spriteSheetKey || globals.MASTER_SPRITE_SHEET_KEY;
+        this.image = assetManager.getSpriteSheetImage(this.spriteSheetKey);
+
+        // Logging for pickle_player_idle
+        if (this.animationName === "pickle_player_idle") {
+            console.log(`%cPICKLE_PLAYER_CONSTRUCTOR (Sprite.js): animName=${this.animationName}, sheetKey=${this.spriteSheetKey}, assetManager returned:`, 'background-color: yellow; color: black; font-weight: bold;', this.image);
+            if (!this.image) {
+                // This log will be crucial again after fixing the ReferenceError
+                console.error('%cPICKLE_PLAYER_CONSTRUCTOR (Sprite.js): this.image is NULL after assetManager call!', 'background-color: red; color: white; font-weight: bold;');
+            }
         }
-        console.log("IMAGE_IS_"+this.image);
-        // 2. Call your image fetching function and log its direct result
-        // Make sure getSpriteSheetImage is accessible here (global or imported)
-        try {
-            this.image = getSpriteSheetImage(sheetKey); // Or assetManager.getImage(sheetKey)
-            console.log(`[SPRITE CONSTRUCTOR] Result from getSpriteSheetImage("${sheetKey}"):`, this.image);
-        } catch (e) {
-            console.error(`[SPRITE CONSTRUCTOR] Error calling getSpriteSheetImage("${sheetKey}"):`, e);
-            this.image = null;
-        }
-        console.log("IMAGE_IS_"+this.image);
+
+        // Your extensive logging from before (can be trimmed once stable)
+        // console.log(`[SPRITE CONSTRUCTOR - ${this.animationName}] Determined spriteSheetKey: "${this.spriteSheetKey}". Image fetched:`, this.image);
+        // if (!this.image) console.error(...);
+        // console.log(`[SPRITE CONSTRUCTOR] Called for: animationName = "${animationName}"`);
+        // ... etc. ...
 
         if (!this.image) {
-            console.warn(`[SPRITE CONSTRUCTOR] this.image is STILL NULL/UNDEFINED after attempting to fetch for key "${sheetKey}" from animation "${animationName}".`);
-        } else if (!(this.image instanceof HTMLImageElement) || !this.image.complete) {
-            console.warn(`[SPRITE CONSTRUCTOR] Fetched image for "${sheetKey}" is not a complete HTMLImageElement:`, this.image);
-            // It might be better to set this.image to null here if it's not valid,
-            // rather than letting drawImage fail later.
-            // this.image = null;
-        }
-        console.log("IMAGE_IS_"+this.image);//Aok//TODO NOT NULLL////////////////////////////////////
-
-        // ... rest of your Sprite constructor (setting up frames, etc.)
-        // These might also fail if animDef was missing earlier.
-        if (this.image && animDef && animDef.frames) { // Only if image and animDef are good
-            const initialFrame = animDef.frames[0];
-            if (initialFrame) {
-                this.width = initialFrame.sWidth * spriteScale; // Native size from sprite frame
-                this.height = initialFrame.sHeight * spriteScale;
-            } else {
-                console.error(`[SPRITE CONSTRUCTOR] animDef for "${animationName}" has no frame 0.`);
-                // Set default width/height or handle error
-            }
-            // ...
-        } else if (!this.image) {
-            console.log("[SPRITE CONSTRUCTOR] Skipping frame setup because this.image is null.");
-        } else {
-            console.log(`[SPRITE CONSTRUCTOR] Skipping frame setup for "${animationName}" due to missing animDef.frames or initialFrame.`);
+            console.warn(`[SPRITE CONSTRUCTOR - ${this.animationName}] this.image is STILL NULL/UNDEFINED after attempting to fetch for key "${this.spriteSheetKey}".`);
+            this.isActive = false; // Good idea to deactivate if image is missing
         }
 
+        this.currentFrameIndex = 0;
+        this.totalFramesInAnimation = animDef.frames.length; // Safe now because of the check above
+        this.animationLoop = animDef.loop !== undefined ? animDef.loop : true;
+        this.currentFrameDuration = initialFrame.duration || animDef.defaultAnimationSpeed || 100;
+        this.lastFrameTime = 0;
+        this.spriteScale = spriteScale;
+        this.facingDirection = 1;
 
-
-
+        // Ensure isActive is true by default if no errors occurred that set it to false
+        if (this.isActive === undefined) { // Check if isActive wasn't already set to false by an error condition
+            this.isActive = true;
+        }
     }
 
 
     update(deltaTime, currentTime, activeGameElements) {
         super.update(deltaTime, currentTime);
         const animDef = ANIMATIONS[this.animationName];
-        console.log("IMAGE_IS_"+this.image);//null//TODO NULL//////////////////////////////////////
+        console.log("IMAGE_IS_117?"+this.image);//null//TODO NULL//////////////////////////////////////
         // **** ADD THIS CRITICAL DEBUGGING ****
         if (!animDef) {
 
@@ -212,24 +175,18 @@ export class Sprite extends GameObject {
             console.log("IMAGE_IS_"+this.image);
             ctx.drawImage(this.image, frame.sx, frame.sy, frame.sWidth, frame.sHeight, 0, 0, drawWidth, drawHeight);
         } else {
-            console.log("IMAGE_IS_"+this.image);
+            console.log("IMAGE_IS_thisisTheOffendingCall"+this.image);
             ctx.drawImage(this.image, frame.sx, frame.sy, frame.sWidth, frame.sHeight, drawX, drawY, drawWidth, drawHeight);
         }
-
-
         // DEBUG BOUNDARY CHECK:
         // Make sure you are using the same width calculation as in your collision logic.
-
         if(globals.debugDraw) {
-
-
             const DrawWidth = frame.sWidth * this.spriteScale;
             const DrawHeight = frame.sHeight * this.spriteScale;
 
             // Save current global alpha and fill style
             let originalAlpha = ctx.globalAlpha;
             let originalFill = ctx.fillStyle;
-
             ctx.globalAlpha = 0.3; // Make it semi-transparent
             ctx.fillStyle = 'cyan';
             // Note: this.x and this.y are already in the globally transformed space's native coordinates
@@ -241,8 +198,6 @@ export class Sprite extends GameObject {
             ctx.globalAlpha = originalAlpha;
             ctx.fillStyle = originalFill;
         }
-
-
         ctx.restore();
     }
 }
