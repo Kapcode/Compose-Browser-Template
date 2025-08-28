@@ -1,6 +1,4 @@
 // ./globals.js
-import { gamePaused, gameStopped, gameStateLogs, timeWhenPauseActuallyStarted } from './main.js';
-
 // --- Game Config / Native Dimensions ---
 export const nativeGameWidth = 1280;
 export const nativeGameHeight = 720;
@@ -27,9 +25,13 @@ export const sceneState = {
 export const debugDraw = true;
 
 // --- Asset Paths & Loading State ---
-export const SPRITE_SHEET_SRC = 'images/pickle/master-sprite.png';//possibly not needed
+export const SPRITE_SHEET_SRC = 'images/pickle/ms.png';//possibly not needed
+
+export const MASTER_SPRITE_SHEET_KEY = "master_spritesheet";
+export const SPRITE_SHEET_PATH = 'images/pickle/ms.png'; // Make sure this path is correct for your server setup
+
 export let spriteSheetLoadStatus = 'pending';
-// export const ASSET_PATHS = { masterSheet: 'images/pickle/master-sprite.png' }; // Redundant if SPRITE_SHEET_SRC is used
+// export const ASSET_PATHS = { masterSheet: 'images/pickle/ms.png' }; // Redundant if SPRITE_SHEET_SRC is used
 export function setSpriteSheetLoadStatus(status) {
     spriteSheetLoadStatus = status;
 }
@@ -42,7 +44,7 @@ export const default_scale = 1.0;
 // --- Animation Definitions ---
 export const ANIMATIONS = {
     "cheff_ketchup_walk": {
-        sheet: SPRITE_SHEET_SRC,
+        spriteSheetKey: MASTER_SPRITE_SHEET_KEY, // Use the key
         loop: true,
         defaultAnimationSpeed: 300,
         baseMovementSpeed: 50,
@@ -53,7 +55,7 @@ export const ANIMATIONS = {
         ]
     },
     "pickle_player_idle": {
-        sheet: SPRITE_SHEET_SRC,
+        spriteSheetKey: MASTER_SPRITE_SHEET_KEY, // Use the key
         loop: true,
         defaultAnimationSpeed: 300,
         baseMovementSpeed: 0,

@@ -1,6 +1,6 @@
 import { Sprite } from './Sprite.js';
 import * as globals from './globals.js';
-import { getSpriteSheetImage, isSpriteSheetLoaded } from './assetManager.js'; // <--- ADD THIS IMPORT
+import { getSpriteSheetImage } from './assetManager.js';
 export class Character extends Sprite {
     constructor(x, y, animationName, spriteScale, health, speed) {
         super(x, y, animationName, spriteScale);

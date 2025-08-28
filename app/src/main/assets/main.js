@@ -1,5 +1,5 @@
 import * as globals from './globals.js'; // Assuming globals.js now correctly defines its exports
-import { loadSpriteSheet as loadAppSpriteSheet, getSpriteSheetImage, isSpriteSheetLoaded } from './assetManager.js';
+import * as assetManager from './assetManager.js';
 import { GameObject } from './GameObject.js';
 import { Sprite } from './Sprite.js';
 import { Player } from './Player.js';
@@ -8,11 +8,24 @@ import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERT
 import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
 import { initInput, isActionActive, isKeyDown, removeInputListeners } from './input.js'; // Added removeInputListeners
+import { pPickle1, updatePickleMovement, createPicklePlayerInstance } from './PickleMan.js';
+import { eChef1, createPatrolingChef } from './ChefEnemy.js';
+import * as gameState from './gameState.js'
+// ---- IMMEDIATELY LOG THESE VALUES ----
+console.log("-------------------------------------------");
+console.log("[Main.js] AT VERY TOP OF MAIN.JS:");
+console.log("[Main.js] typeof globals:", typeof globals);
+console.log("[Main.js] globals object:", globals); // This will show all exported members from globals.js
+console.log("[Main.js] typeof globals.SPRITE_SHEET_PATH:", typeof globals.SPRITE_SHEET_PATH);
+console.log("[Main.js] Value of globals.SPRITE_SHEET_PATH:", globals.SPRITE_SHEET_PATH);
+console.log("[Main.js] Value of globals.MASTER_SPRITE_SHEET_KEY:", globals.MASTER_SPRITE_SHEET_KEY);
+console.log("-------------------------------------------");
+
 
 //canvas
 export let canvas = null; // Changed from top-level getElementById
 export let ctx = null;    // Changed from top-level getContext
-
+let activeGameElements = []; // Initialize as an empty array
 //game area
 let gameAreaViewBoxWidth = 0;
 let gameAreaViewBoxHeight = 0;
@@ -21,12 +34,12 @@ let liveGameArea = null; // This will also be the canvas
 export let debugDraw = true;
 
 //game state
-export let gamePaused = false;
-export let gameStopped = true;
+
+
 export let animationFrameId = null; // ID from requestAnimationFrame
 
 export const gameStateLogs = false;
-export let activeGameElements = [];
+
 
 // --- Game Loop Timing ---
 export let gameTimeAccumulator = 0;
@@ -37,6 +50,28 @@ export let spawnCounter = 0;
 export const SPAWN_INTERVAL_FRAMES = 120; // Example
 //score
 export let score = 0;
+
+
+
+//assets/////////////////////////////////////////////////////
+let assetsToLoad = 0;
+let assetsLoaded = 0;
+
+function assetLoaded(err, key) { // A general callback for each loaded asset
+    if (err) {
+        console.error(`Error loading asset ${key}:`, err.message);
+    } else {
+        console.log(`Asset ${key} successfully processed in main.`);
+    }
+    assetsLoaded++;
+    if (assetsLoaded === assetsToLoad) {
+        startGame(); // Or whatever your function is to proceed after all assets are loaded
+    }
+}
+
+
+
+
 
 
 function handleGameResumeAfterSystemPause() {
@@ -51,12 +86,12 @@ function handleGameResumeAfterSystemPause() {
 }
 
 document.addEventListener("visibilitychange", () => {
-    if (gameStopped) {
+    if (gameState.gameStopped) {
         return; // If game is fully stopped, visibility changes don't matter for game logic
     }
 
     if (document.hidden) {
-        if (!gamePaused) {
+        if (!gameState.gamePaused) {
             console.log("Page hidden, auto-pausing game logic.");
             setPauseState(true);
             console.log("Game auto-paused due to page visibility change.");
@@ -68,14 +103,15 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function setPauseState(pause) {
-    if (gamePaused === pause) {
+    if (gameState.gamePaused) {
         if (gameStateLogs) console.warn("Game is already in the requested pause state:", pause);
         return;
     }
-    gamePaused = pause;
+    gameState.setGamePaused(true);
+
     if (pause) {
-        timeWhenPauseActuallyStarted = performance.now();
-        if (gameStateLogs) console.log("Game paused at", timeWhenPauseActuallyStarted);
+
+        if (gameStateLogs) console.log("Game paused by gameState.JS.");
     } else {
         const timeNow = performance.now();
         const durationOfPause = timeWhenPauseActuallyStarted > 0 ? (timeNow - timeWhenPauseActuallyStarted) / 1000 : 0;
@@ -106,18 +142,18 @@ const MAX_DELTA_TIME = 0.01666666667; // Approx 60 FPS fixed time step
 function gameLoop(currentTimestamp) {
     if (!canvas || !ctx) { // Ensure canvas and context are available
         console.error("Canvas or context not initialized. Stopping game loop.");
-        gameStopped = true;
+        gameState.setGameStopped(true);
         return;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!liveGameArea) { // liveGameArea is the canvas
         console.error("CRITICAL: liveGameArea (canvas) not found! Stopping loop.");
-        gameStopped = true;
+        gameState.setGameStopped(true);
         return;
     }
 
-    if (gameStopped) {
+    if (gameState.gameStopped) {
         if (gameStateLogs) console.log("Game is stopped. Game loop terminated.");
         return;
     }
@@ -130,7 +166,7 @@ function gameLoop(currentTimestamp) {
 
     let deltaTime = (currentTimestamp - lastTimestamp) / 1000;
 
-    if (gamePaused) {
+    if (gameState.gamePaused) {
         if (gameStateLogs) console.log("GameLoop: Game is paused. Skipping updates.");
         animationFrameId = requestAnimationFrame(gameLoop);
         return;
@@ -152,14 +188,14 @@ function gameLoop(currentTimestamp) {
     gameTimeAccumulator += deltaTime;
 
     while (gameTimeAccumulator >= MAX_DELTA_TIME) {
-        if (!gamePaused) {
+        if (!gameState.gamePaused) {
             gameLogic(); // Removed liveGameArea argument, it uses module-scoped canvas
             updateGameElements(MAX_DELTA_TIME, currentTimestamp);
         }
         gameTimeAccumulator -= MAX_DELTA_TIME;
     }
 
-    if (!gamePaused) {
+    if (!gameState.gamePaused) {
         drawGameElements(ctx);
     }
 
@@ -178,52 +214,58 @@ function gameLogic() {
 function startGame() {
 
     playPooledSound('jump', 'sounds/gameOver.wav'); // Assuming this sound ID is defined elsewhere or in HTML
-    gamePaused = false;
+    gameState.setGamePaused(false);
     if (animationFrameId === null) {
         resizeCanvasAndCalculateScale();
         hidePauseMenu();
         console.log("Starting new game.");
         score = 0;
-        initInput();
         initializeGame();
         console.log("Starting game loop.");
         lastTimestamp = performance.now();
         animationFrameId = requestAnimationFrame((timestamp) => gameLoop(timestamp)); // Removed liveGameArea argument
-        gameStopped = false;
+        gameState.setGameStopped(false);
     } else {
         console.log("Game is already running, cannot start again.");
     }
 
-    if (isSpriteSheetLoaded()) {
-        console.log("Sprite sheet loaded. Starting game.");
-        const eChef1 = new EnemyPatrol(
-            200,
-            globals.nativeGameHeight - 150, // Assuming nativeGameHeight from globals
-            "cheff_ketchup_walk",
-            globals.default_scale,
-            50, // health
-            80, // speed
-            0,  // patrolMinX
-            globals.nativeGameWidth // patrolMaxX, assuming nativeGameWidth from globals
-        );
-        activeGameElements.push(eChef1);
 
-        const pPickle1 = new PicklePlayer(
-            400,
-            globals.nativeGameHeight - 150,
-            "pickle_player_idle",
-            globals.default_scale
-        );
+
+
+
+
+    createPicklePlayerInstance(100,100,"pickle_player_idle",globals.default_scale);//x, y, animationName, spriteScale
+
+
+
+    createPatrolingChef(200,
+        globals.nativeGameHeight - 150,
+        "cheff_ketchup_walk",
+        globals.default_scale,
+        50,
+        80,
+        0,
+        globals.nativeGameWidth / 2);//x,y,animationName,spriteScale,health,speed,patrolMinX,patrolMaxX
+    // Add your main Pickle player to the game elements
+    if (pPickle1) { // Ensure it's defined
+        // You might need to set properties on pPickle1 if not set in constructor,
+        // e.g., pPickle1.speed = 200; pPickle1.width = 50; pPickle1.height = 80;
+        // Make sure these properties exist on the pPickle1 object/class instance.
+        if (typeof pPickle1.speed === 'undefined') pPickle1.speed = 100; // Default speed
+        //if (typeof pPickle1.width === 'undefined') pPickle1.width = 32;   // Example default width
+        //if (typeof pPickle1.height === 'undefined') pPickle1.height = 48; // Example default height
         activeGameElements.push(pPickle1);
-    }else{
-        console.log("Sprite sheet not loaded yet. Cannot start game. boohoo");
     }
+    if(eChef1){
+        activeGameElements.push(eChef1);
+    }
+
 }
 
 function stopGame() {
     if (animationFrameId) {
-        gameStopped = true;
-        gamePaused = false;
+        gameState.setGameStopped(true);
+        gameState.setGamePaused(false);
         console.log("Stopping game loop.");
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
@@ -427,54 +469,9 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
     return newSprite;
 }
 
-class PicklePlayer extends Player {
-    constructor(x, y, animationName, spriteScale) {
-        super(x, y, animationName, spriteScale); // Assumes Player constructor uses globals.ANIMATIONS if needed
-        this.entityType = "player_pickle";
-    }
-}
 
-class EnemyPatrol extends Character {
-    constructor(x, y, animationName, spriteScale, health, speed, patrolMinX, patrolMaxX) {
-        // Assumes Character/Sprite constructor correctly uses globals.ANIMATIONS
-        super(x, y, animationName, spriteScale, health, speed);
-        this.entityType = "enemy_chef_ketchup_patrol";
-        this.direction.x = 1;
-        this.patrolMinX = patrolMinX;
-        this.patrolMaxX = patrolMaxX;
-        if (globals.debugDraw) console.log(`EnemyPatrol CONSTRUCTOR: Spawned with patrolMinX=${this.patrolMinX}, patrolMaxX=${this.patrolMaxX}`);
-    }
 
-    update(deltaTime, currentTime, activeGameElementsRef) { // activeGameElementsRef is activeGameElements
-        super.update(deltaTime, currentTime, activeGameElementsRef);
 
-        const currentFrameDef = globals.ANIMATIONS[this.animationName].frames[this.currentFrameIndex];
-
-        if (!currentFrameDef || typeof currentFrameDef.sWidth === 'undefined') {
-            console.error(`EnemyPatrol Update: Invalid currentFrameDef or sWidth for ${this.animationName}, index ${this.currentFrameIndex}. Entity: ${this.entityType}`);
-            return;
-        }
-
-        const currentSpriteNativeWidth = currentFrameDef.sWidth * this.spriteScale;
-        if (globals.debugDraw) console.log(
-            `Boundary Check DEBUG: Chef X: ${this.x.toFixed(2)}, ` +
-            `SpriteNativeWidth: ${currentSpriteNativeWidth.toFixed(2)}, ` +
-            `CalculatedRightEdge: ${(this.x + currentSpriteNativeWidth).toFixed(2)}, ` +
-            `patrolMinX: ${this.patrolMinX}, patrolMaxX: ${this.patrolMaxX}, ` +
-            `sWidth: ${currentFrameDef.sWidth}, spriteScale: ${this.spriteScale}`
-        );
-
-        if (this.direction.x > 0 && (this.x + currentSpriteNativeWidth) >= this.patrolMaxX) {
-            this.x = this.patrolMaxX - currentSpriteNativeWidth;
-            this.direction.x = -1;
-            this.facingDirection = -1;
-        } else if (this.direction.x < 0 && this.x <= this.patrolMinX) {
-            this.x = this.patrolMinX;
-            this.direction.x = 1;
-            this.facingDirection = 1;
-        }
-    }
-}
 
 class Scenery extends Sprite {
     constructor(x, y, animationName, spriteScale) {
@@ -740,6 +737,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return; // Stop further execution if canvas isn't found
     }
 
+
+    //input
+    //initInput();
+
     // --- Initialize references to UI elements (now that DOM is ready) ---
     // These now assign to the properties of the imported 'globals' object.
     // This assumes globals.js exports these variable names (e.g., export let welcomeBackgroundImageContainer = null;)
@@ -929,18 +930,34 @@ document.addEventListener('DOMContentLoaded', () => {
     initOrientationDetection();
     // resizeCanvasAndCalculateScale(); // Already called after canvas init
 
-    // Load assets
-    console.log("Main.js: Requesting sprite sheet load...");
-    globals.setSpriteSheetLoadStatus('loading'); // Update global status if using that pattern
-    loadAppSpriteSheet((error) => { // Use the imported and potentially aliased function
-        if (error) {
-            console.error("Main.js: Sprite sheet loading failed!", error);
-            globals.setSpriteSheetLoadStatus('error');
-            // Handle critical asset load failure (e.g., show error message, don't start game)
-            return;
-        }
-        console.log("Main.js: Sprite sheet successfully loaded (callback received).");
-        globals.setSpriteSheetLoadStatus('loaded');
+    // Define what you need to load
+    const assetsManifest = [
+        { key: globals.MASTER_SPRITE_SHEET_KEY, path: globals.SPRITE_SHEET_PATH },
+        // { key: "another_image", path: "path/to/another.png" }, // If you have more
+        // { key: "background_main", path: "path/to/background.jpg" },
+    ];
+
+    assetsToLoad = assetsManifest.length;
+
+    if (assetsToLoad === 0) {
+        startGame(); // No assets to load, proceed directly
+        return;
+    }
+
+    assetsManifest.forEach(asset => {
+        assetManager.loadImage(asset.key, asset.path, (err, img) => {
+
+            console.log(`Asset loaded: ${asset.key}`);
+            console.log(asset.path);
+            if (err) {
+                console.error(`Failed to load asset: ${asset.key}`, err);
+                return;
+            }
+
+            // This inner callback is specific to assetManager.loadImage
+            // You can do something here if needed, or rely on a more general counter.
+            assetLoaded(err, asset.key); // Call your general counter
+        });
 
         // Now it's safe to initialize parts of the game that depend on the sprite sheet
         // For example, if startGame() spawns sprites:
