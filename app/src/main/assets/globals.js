@@ -25,10 +25,10 @@ export const sceneState = {
 export const debugDraw = true;
 
 // --- Asset Paths & Loading State ---
-export const SPRITE_SHEET_SRC = 'images/pickle/ms.png';//possibly not needed
-
-export const MASTER_SPRITE_SHEET_KEY = "master_spritesheet";
-export const SPRITE_SHEET_PATH = 'images/pickle/ms.png'; // Make sure this path is correct for your server setup
+export const SPRITE_SHEET_SRC = 'images/pickle/ms.png';//todo remove this was path in manifest, now im usinbg imagePath
+export const SPRITE_SHEET_PATH = 'images/pickle/master.png'; // Or make this SPRITE_SHEET_IMAGE_PATH
+export const SPRITE_SHEET_JSON_PATH = 'images/pickle/master.json'; // <<<< ADD THIS (Adjust path as needed)
+export const MASTER_SPRITE_SHEET_KEY = 'master_spritesheet';
 
 export let spriteSheetLoadStatus = 'pending';
 // export const ASSET_PATHS = { masterSheet: 'images/pickle/ms.png' }; // Redundant if SPRITE_SHEET_SRC is used
@@ -41,29 +41,51 @@ export function setSpriteSheetLoadStatus(status) {
 // --- Default Scale for Entities ---
 export const default_scale = 1.0;
 
-// --- Animation Definitions ---
+// In globals.js
 export const ANIMATIONS = {
     "cheff_ketchup_walk": {
-        spriteSheetKey: MASTER_SPRITE_SHEET_KEY, // Use the key
+        spriteSheetKey: MASTER_SPRITE_SHEET_KEY,
         loop: true,
-        defaultAnimationSpeed: 300,
+        defaultAnimationSpeedFPS: 10, // Or use per-frame durations
         baseMovementSpeed: 50,
+        baseSpeedModifier: 1, // Optional: base speed modifier for the animation
         frames: [
-            { sx: 0,  sy: 0, sWidth: 90, sHeight: 150, duration: 50 ,speedModifier: 1},
-            { sx: 95, sy: 154, sWidth: 92, sHeight: 149, duration: 200 ,speedModifier: 0.2},
-            { sx: 100, sy: 0, sWidth: 110, sHeight: 150, duration: 200,speedModifier: 0.2  }
+            // THESE MUST BE STRINGS (SPRITE NAMES FROM YOUR JSON)
+            // OR OBJECTS LIKE { name: "sprite_name", duration: ..., speedModifier: ... }
+             // Example sprite name
+            "chef_step.png",
+            "chef_step2.png"
+            // If using objects for per-frame details:
+            // { name: "chef_walk_frame_0", duration: 100, speedModifier: 1.0 },
+            // { name: "chef_walk_frame_1", duration: 100, speedModifier: 1.0 },
+            // { name: "chef_walk_frame_2", duration: 120, speedModifier: 0.9 }
         ]
     },
     "pickle_player_idle": {
-        spriteSheetKey: MASTER_SPRITE_SHEET_KEY, // Use the key
+        spriteSheetKey: MASTER_SPRITE_SHEET_KEY,
         loop: true,
-        defaultAnimationSpeed: 300,
+        defaultAnimationSpeedFPS: 5,
         baseMovementSpeed: 0,
         frames: [
-            { sx: 0,  sy: 320, sWidth: 83, sHeight: 115, duration: 500 ,speedModifier: 0}
+            "walk-pickle-1.png", // Example sprite name
+            "walk-pickle-2.png"//example
+        ]
+    },
+    "pickle_player_walk": { // Example for player walk
+        spriteSheetKey: MASTER_SPRITE_SHEET_KEY,
+        loop: true,
+        defaultAnimationSpeedFPS: 12,
+        baseMovementSpeed: 0, // Movement speed might be handled by Player class itself
+        frames: [
+            "pickle_walk_frame_0",//example
+            "pickle_walk_frame_1.png",//example dont forget your file extention.... usde exact name in json file!
+            "pickle_walk_frame_2",
+            "pickle_walk_frame_3"
         ]
     }
+    // ... other animations ...
 };
+
 
 // --- DOM Element References (Exported as null, initialized in main.js) ---
 // It's often better to manage DOM elements in the module that directly uses them (main.js or a UI module)

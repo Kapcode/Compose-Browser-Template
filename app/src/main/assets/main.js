@@ -10,6 +10,7 @@ import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
 import { pPickle1, createPicklePlayerInstance } from './PickleMan.js';
 import { eChef1, createPatrolingChef } from './ChefEnemy.js';
+import * as camera from './camera.js';
 import * as gameState from './gameState.js'
 // ---- IMMEDIATELY LOG THESE VALUES ----
 console.log("-------------------------------------------");
@@ -57,6 +58,110 @@ export let score = 0;
 let assetsToLoadCount = 0; // <<<< DECLARED HERE (Correct) ..PalmFace
 let assetsSuccessfullyLoadedCount = 0;
 let assetsFailedToLoadCount = 0;
+// THIS IS THE CORRECT VERSION for the progressCallback of processManifest
+// In main.js
+function singleAssetProcessed(key, error, assetData, processedCount, totalToProcess) {
+    console.log(`%c[singleAssetProcessed START] Key: "${key}"`, "color: magenta;");
+    console.log(`[singleAssetProcessed] Received 'error' argument:`, error);
+    console.log(`[singleAssetProcessed] typeof error: ${typeof error}`);
+    console.log(`[singleAssetProcessed] Boolean(error) evaluation: ${Boolean(error)}`);
+
+    if (error) { // This is where assetsFailedToLoadCount is incremented
+        console.error(`[singleAssetProcessed] 'error' is TRUTHY. Incrementing assetsFailedToLoadCount.`);
+        assetsFailedToLoadCount++;
+        console.error(`[Main.js] Failed to load asset: "${key}". Error details: ${error.message || error}. Total FAILED: ${assetsFailedToLoadCount}`);
+    } else {
+        console.log(`[singleAssetProcessed] 'error' is FALSY. Incrementing assetsSuccessfullyLoadedCount.`);
+        assetsSuccessfullyLoadedCount++;
+        console.log(`[Main.js] Successfully loaded asset: "${key}". Loaded data:`, assetData, `Total SUCCESSFUL: ${assetsSuccessfullyLoadedCount}`);
+    }
+    console.log(`%c[singleAssetProcessed END] Key: "${key}" - FailedCount: ${assetsFailedToLoadCount}, SuccessCount: ${assetsSuccessfullyLoadedCount}`, "color: magenta;");
+}
+
+
+
+// And this remains your completion callback:
+function allAssetsProcessed(successful, failed, totalInManifest) {
+    console.log(`[Main.js allAssetsProcessed] Manifest processing finished. Total: ${totalInManifest}, Successful: ${successful}, Failed: ${failed}`);
+    // Now call your original function that checks counts and enables the start button
+    proceedToGameStartConditionCheck();
+
+}
+
+
+
+
+// THIS IS THE RECOMMENDED VERSION
+function proceedToGameStartConditionCheck() {
+    console.log("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,)
+    // Ensure uiElements are populated before using them
+    if (!uiElements || !uiElements.loadingMessage || !uiElements.startGameButton || !uiElements.gameLoadError) {
+        console.error("[proceedToGameStartConditionCheck] Critical UI elements are missing. Cannot update UI state.");
+        // Potentially display a fatal error to the user on the page itself if possible
+        // document.body.innerHTML = "A critical UI error occurred. Please refresh.";
+        return;
+    }
+
+    console.log("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,
+        "Successful:", assetsSuccessfullyLoadedCount, "Failed:", assetsFailedToLoadCount);
+
+
+    if (uiElements.loadingMessage) {
+        uiElements.loadingMessage.style.display = 'none';
+    }
+
+    if (assetsFailedToLoadCount > 0) {
+        const errorMessage = `Failed to load ${assetsFailedToLoadCount} essential game file(s). Please refresh.`;
+        console.log(`CRITICAL: ${errorMessage}`);
+        displayAssetLoadError(errorMessage); // Ensure this function correctly shows the error
+        uiElements.startGameButton.disabled = true;
+        uiElements.startGameButton.textContent = "Error Loading Assets";
+    } else if (assetsSuccessfullyLoadedCount === assetsToLoadCount) {
+        // This is the ideal success case
+        console.log("All essential assets loaded successfully! Ready for user to start.");
+        if (uiElements.gameLoadError) {
+            uiElements.gameLoadError.style.display = 'none';
+        }
+        // showWelcomeScreen(); // This might be redundant if the welcome screen is already visible
+        // Or, ensure it correctly shows the part with the start button.
+        uiElements.startGameButton.disabled = false;
+        uiElements.startGameButton.textContent = "Start Game";
+        console.log("Start button should now be enabled.");
+    } else {
+        // This 'else' block handles cases where:
+        // 1. assetsToLoadCount was 0 initially (e.g., empty manifest).
+        // 2. Not all assets loaded successfully, but there were no explicit *failures* counted.
+        //    (e.g., assetsSuccessfullyLoadedCount < assetsToLoadCount, but assetsFailedToLoadCount is 0)
+        //    This could indicate an issue in the loading logic where an asset didn't complete
+        //    or wasn't accounted for, without throwing an error that incremented failedCount.
+
+        if (assetsToLoadCount === 0) {
+            console.log("[proceedToGameStartConditionCheck] No assets were manifested to load. Enabling start.");
+            uiElements.startGameButton.disabled = false;
+            uiElements.startGameButton.textContent = "Start Game";
+        } else {
+            // This is the more problematic 'other' case: some assets didn't load successfully,
+            // but no errors were explicitly caught and counted by assetsFailedToLoadCount.
+            const message = `Assets did not load as expected. Expected: ${assetsToLoadCount}, Loaded: ${assetsSuccessfullyLoadedCount}, Failed: ${assetsFailedToLoadCount}. Please refresh.`;
+            console.warn(`[proceedToGameStartConditionCheck] Unexpected asset loading state: ${message}`);
+            displayAssetLoadError(message); // Show a generic error
+            uiElements.startGameButton.disabled = true;
+            uiElements.startGameButton.textContent = "Load Issue";
+        }
+    }
+}
+
+// Ensure displayAssetLoadError is robust:
+function displayAssetLoadError(message) {
+    if (uiElements && uiElements.gameLoadError) {
+        uiElements.gameLoadError.textContent = message;
+        uiElements.gameLoadError.style.display = 'block';
+    } else {
+        console.error("gameLoadError UI element not found. Fallback alert:", message);
+        alert("Error loading game: " + message); // Fallback
+    }
+}
+
 
 function assetLoaded(err, key) { // A general callback for each loaded asset
     if (err) {
@@ -79,68 +184,12 @@ let uiElements = {
     // Add other UI elements if you have them, e.g., scoreDisplay, healthBar
 };
 
-// main.js (continued)
-// assetManager.loadImage will execute for each asset. .. call this every time you load an asset
-function singleAssetProcessed(key, error, image) { // key, error, image are provided by assetManager.loadImage
-    console.log(`[Main.js] singleAssetProcessed received for key: "${key}". Error: ${error ? error.message : 'No Error'}`);
 
-    if (error) {
-        assetsFailedToLoadCount++;
-        console.error(`[Main.js] Failed to load asset: "${key}". Error: ${error.message}. Total FAILED: ${assetsFailedToLoadCount}`);
-        // Optionally, update UI to show specific asset failure if you want that detail
-    } else {
-        assetsSuccessfullyLoadedCount++;
-        console.log(`[Main.js] Successfully loaded asset: "${key}". Image object:`, image, `Total SUCCESSFUL: ${assetsSuccessfullyLoadedCount}`);
-    }
 
-    // Check if ALL assets (from the manifest) have been processed
-    if ((assetsSuccessfullyLoadedCount + assetsFailedToLoadCount) === assetsToLoadCount) {
-        console.log(`[Main.js] All ${assetsToLoadCount} assets processed. Successful: ${assetsSuccessfullyLoadedCount}, Failed: ${assetsFailedToLoadCount}`);
-        proceedToGameStartConditionCheck(); // Now decide what to do (enable start button or show error)
-    }
-}
 
 //This function runs after all assets in the manifest have been attempted. It decides if the game can proceed.
 //runs after every asset has been loaded, can the game start?
-function proceedToGameStartConditionCheck() {
-    if (uiElements.loadingMessage) {
-        uiElements.loadingMessage.style.display = 'none'; // Hide "Loading assets..." message
-    }
 
-    if (assetsFailedToLoadCount > 0) {
-        // Handle critical asset load failure
-        const errorMessage = `Failed to load ${assetsFailedToLoadCount} essential game file(s). Please refresh to try again.`;
-        console.error(`CRITICAL: ${errorMessage}`);
-        displayAssetLoadError(errorMessage); // Show this error on the page
-        if (uiElements.startGameButton) {
-            uiElements.startGameButton.disabled = true; // Keep start button disabled
-            uiElements.startGameButton.textContent = "Error Loading";
-        }
-    } else {
-        // ALL essential assets loaded SUCCESSFULLY
-        console.log("All essential assets loaded successfully! Ready for user to start.");
-        if (uiElements.gameLoadError) {
-            uiElements.gameLoadError.style.display = 'none'; // Hide any previous error message
-        }
-        showWelcomeScreen(); // Make sure your welcome screen with the start button is visible
-        if (uiElements.startGameButton) {
-            uiElements.startGameButton.disabled = false; // ENABLE the start button
-            uiElements.startGameButton.textContent = "Start Game"; // Set appropriate text
-            console.log("Start button should now be enabled.");
-        }
-    }
-}
-
-function displayAssetLoadError(message) {
-    if (uiElements.gameLoadError) {
-        uiElements.gameLoadError.textContent = message;
-        uiElements.gameLoadError.style.display = 'block'; // Or 'flex', depending on your CSS
-        console.error("DISPLAYING ASSET LOAD ERROR ON PAGE:", message);
-    } else {
-        console.error("Could not display asset load error on page, uiElements.gameLoadError not found. Message:", message);
-        alert("Error loading game assets: " + message); // Fallback
-    }
-}
 
 function handleGameResumeAfterSystemPause() {
     const timeNow = performance.now();
@@ -200,8 +249,16 @@ function gameLoop(currentTimestamp) {
         gameState.setGameStopped(true);
         return;
     }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Update camera (before any drawing related to world objects)
+    if (window.camera) { // Make sure camera is defined
+        window.camera.update();
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Apply camera transformations
+    if (window.camera) {
+        window.camera.apply(ctx);
+    }
     if (!liveGameArea) { // liveGameArea is the canvas
         console.error("CRITICAL: liveGameArea (canvas) not found! Stopping loop.");
         gameState.setGameStopped(true);
@@ -253,8 +310,12 @@ function gameLoop(currentTimestamp) {
     if (!gameState.gamePaused) {
         drawGameElements(ctx);
     }
-
+    // Release camera transformations
+    if (window.camera) {
+        window.camera.release(ctx);
+    }
     animationFrameId = requestAnimationFrame(gameLoop);
+
 }
 
 function gameLogic() {
@@ -298,7 +359,7 @@ function startGame() {
 
     console.log(`%c[Main.js startGame] AFTER initializeGame, pPickle1.image is:`, 'color: teal; font-weight: bold;', pPickle1 ? pPickle1.image : "pPickle1 is null");
 
-    createPicklePlayerInstance(100,100,"pickle_player_idle",globals.default_scale,100,100);//x, y, animationName, spriteScale
+    createPicklePlayerInstance(100,globals.nativeGameHeight - 85,"pickle_player_idle",globals.default_scale,100,100);//x, y, animationName, spriteScale
 
     initializeGame(pPickle1); // Pass playerInstance if initializeGame needs it to add to activeGameElements
 
@@ -317,7 +378,7 @@ function startGame() {
         50,
         80,
         0,
-        globals.nativeGameWidth / 2);//x,y,animationName,spriteScale,health,speed,patrolMinX,patrolMaxX
+        globals.nativeGameWidth);//x,y,animationName,spriteScale,health,speed,patrolMinX,patrolMaxX
     // Add your main Pickle player to the game elements
     if (pPickle1) { // Ensure it's defined
         // You might need to set properties on pPickle1 if not set in constructor,
@@ -819,7 +880,7 @@ function resizeCanvasAndCalculateScale() {
 ////////////////////////////////////////////////////////////////////////////////////////
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     canvas = document.getElementById('gameArea');
     if (canvas) {
@@ -1002,6 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (startButton) {
+
         startButton.addEventListener('click', () => {
             if (animationFrameId) {
                 console.log("Game is already running, cannot start again.");
@@ -1077,14 +1139,18 @@ document.addEventListener('DOMContentLoaded', () => {
     //SETUP ASSET LOADING
 
 
+////////////////i think this is what i need to change
 
-
-    // --- ASSET LOADING ---
+    // In main.js
     const assetsManifest = [
-        { key: globals.MASTER_SPRITE_SHEET_KEY, path: globals.SPRITE_SHEET_PATH },
-        // Add other assets like:
-        // { key: "enemy_spritesheet", path: "images/enemy_sprites.png" },
-        // { key: "background_level1", path: "images/backgrounds/level1.jpg" },
+        {
+            key: globals.MASTER_SPRITE_SHEET_KEY,
+            type: 'masterSpriteSheet',                 // <<<< ADD THIS TYPE
+            jsonPath: globals.SPRITE_SHEET_JSON_PATH,  // <<<< ADD THIS
+            imagePath: globals.SPRITE_SHEET_PATH // <<<< ADD THIS    // This should be the path to the PNG
+        }
+        // Add other assets here if needed, e.g.:
+        // { key: 'anotherImage', type: 'image', path: 'images/other.png' }
     ];
     console.log("[Main.js DOMContentLoaded] Constructed assetsManifest:", JSON.stringify(assetsManifest, null, 2));
 
@@ -1097,29 +1163,152 @@ document.addEventListener('DOMContentLoaded', () => {
         return; // Skip asset loading loop
     }
 
-    assetsToLoadCount = assetsManifest.length;
-    assetsSuccessfullyLoadedCount = 0; // Reset counters
-    assetsFailedToLoadCount = 0;
+ //   assetsToLoadCount = assetsManifest.length;
+  //  assetsSuccessfullyLoadedCount = 0; // These are presumably used in singleAssetProcessed/proceedToGameStart
+  //  assetsFailedToLoadCount = 0;
 
-    if (assetsToLoadCount > 0) {
+/*    if (assetsToLoadCount > 0) {
         assetsManifest.forEach(asset => {
-            console.log(`[Main.js DOMContentLoaded] Requesting asset load for: Key="${asset.key}", Path="${asset.path}"`);
-            if (typeof asset.key === 'undefined' || typeof asset.path === 'undefined' || asset.path === null) {
-                const errorMessage = `Asset in manifest has undefined/null key or path: Key="${asset.key}", Path="${asset.path}"`;
-                console.error(`%c${errorMessage}`, 'color:red; font-weight:bold;');
-                // Treat this as an immediate failure for this asset entry
-                singleAssetProcessed(asset.key || "unknown_asset_key", new Error(errorMessage), null);
+            // Initial log showing what asset we're about to process
+            console.log(`[Main.js] Processing asset manifest entry. Key: "${asset.key}", Type: "${asset.type || 'N/A'}"`);
+
+            // Basic check: Ensure every asset has a key
+            if (!asset.key) {
+                const errorMsg = `Asset in manifest is missing a "key". Entry: ${JSON.stringify(asset)}`;
+                console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
+                // Call singleAssetProcessed with a placeholder or decide how to handle keyless entries
+                singleAssetProcessed("unknown_asset_key_error", new Error(errorMsg), null);
+                return; // Skip this iteration
+            }
+
+            // --- Type-specific loading logic ---
+            if (asset.type === 'masterSpriteSheet') {
+                // Check for required paths for this type
+                if (!asset.jsonPath || !asset.imagePath) {
+                    const errorMsg = `Asset (masterSpriteSheet) "${asset.key}" is missing required jsonPath or imagePath. jsonPath: "${asset.jsonPath}", imagePath: "${asset.imagePath}"`;
+                    console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
+                    singleAssetProcessed(asset.key, new Error(errorMsg), null);
+                } else {
+                    console.log(`[Main.js] Requesting MASTER SPRITE SHEET load for: Key="${asset.key}", JSON="${asset.jsonPath}", Image="${asset.imagePath}"`);
+                    assetManager.loadMasterSpriteSheet(
+                        asset.jsonPath,
+                        asset.imagePath,
+                        singleAssetProcessed, // Your callback
+                        asset.key             // The key for this asset
+                    );
+                }
+            } else if (asset.type === 'image') { // For simple, individual images
+                // Check for required path for this type
+                if (!asset.path) {
+                    const errorMsg = `Asset (image) "${asset.key}" is missing required "path". Path: "${asset.path}"`;
+                    console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
+                    singleAssetProcessed(asset.key, new Error(errorMsg), null);
+                } else {
+                    console.log(`[Main.js] Requesting IMAGE load for: Key="${asset.key}", Path="${asset.path}"`);
+                    assetManager.loadImage(
+                        asset.key,
+                        asset.path,
+                        singleAssetProcessed
+                    );
+                }
             } else {
-                assetManager.loadImage(asset.key, asset.path, singleAssetProcessed);
+                // Handle unknown or missing asset types
+                const errorMsg = `Asset "${asset.key}" has an unknown or unspecified "type" in manifest. Manifest entry: ${JSON.stringify(asset)}`;
+                console.error(`%c${errorMsg}`, 'color:orange; font-weight:bold;');
+                singleAssetProcessed(asset.key, new Error(errorMsg), null);
             }
         });
     } else {
-        // Should have been caught by the earlier check, but as a safeguard
         console.log("[Main.js DOMContentLoaded] No assets to load from manifest. Proceeding.");
+        // This function presumably enables the start button or starts the game if counts match
         proceedToGameStartConditionCheck();
+    }*/
+    // VVVVVV THIS IS WHAT SHOULD BE ACTIVE VVVVVV
+    if (!assetsManifest || assetsManifest.length === 0) {
+        console.warn("Asset manifest is empty. Proceeding as if all assets are loaded.");
+        assetsToLoadCount = 0;
+        assetsSuccessfullyLoadedCount = 0;
+        assetsFailedToLoadCount = 0;
+        proceedToGameStartConditionCheck(); // Correctly handles empty manifest
+    } else {
+        console.log("[DOMContentLoaded] Calling await processManifest...");
+        await processManifest(assetsManifest, singleAssetProcessed, allAssetsProcessed);
+        console.log("[DOMContentLoaded] await processManifest FINISHED."); // Add this log
     }
 
 
 
-
 });
+
+
+// --- Counters for asset loading (used by callbacks) ---
+
+
+
+
+
+
+// --- Your processManifest function (Looks good!) ---
+// In main.js
+export async function processManifest(manifest, progressCallback, completionCallback) {
+    console.log(`%c[processManifest START] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
+    let loadedCount = 0;
+    let failedCount = 0; // These are local to processManifest, used for its own summary
+    const totalAssets = manifest.length;
+
+    // Initialize global counters for this run of processManifest
+    assetsToLoadCount = totalAssets;
+    assetsSuccessfullyLoadedCount = 0;
+    assetsFailedToLoadCount = 0;
+    console.log(`[processManifest] Initialized global counters: ToLoad=${assetsToLoadCount}, Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
+
+    for (const asset of manifest) {
+        let currentAssetKey = asset.key || "UNKNOWN_ASSET_KEY"; // Fallback for key
+        console.log(`[processManifest] Processing asset: ${currentAssetKey} (Type: ${asset.type || 'N/A'})`);
+        let loadedAssetData = null;
+
+        try {
+            if (!asset.key) throw new Error(`Asset in manifest is missing a "key". Entry: ${JSON.stringify(asset)}`);
+            if (!asset.type) throw new Error(`Asset "${currentAssetKey}" is missing a "type".`);
+
+            if (asset.type === "masterSpriteSheet") {
+                if (!asset.jsonPath || !asset.imagePath) throw new Error(`Asset (masterSpriteSheet) "${currentAssetKey}" is missing jsonPath or imagePath.`);
+                console.log(`[processManifest] Attempting to load masterSpriteSheet: "${currentAssetKey}"`);
+                await assetManager.loadMasterSpriteSheet(asset.jsonPath, asset.imagePath, currentAssetKey);
+                loadedAssetData = assetManager.getMasterSheetImage();
+                console.log(`[processManifest] Master sprite sheet "${currentAssetKey}" loaded successfully by assetManager.`);
+            } else if (asset.type === "image") {
+                if (!asset.path) throw new Error(`Asset (image) "${currentAssetKey}" is missing "path".`);
+                console.log(`[processManifest] Attempting to load image: "${currentAssetKey}"`);
+                loadedAssetData = await assetManager.loadImage(currentAssetKey, asset.path);
+                console.log(`[processManifest] Image "${currentAssetKey}" loaded successfully by assetManager.`);
+            } else if (asset.type === "audio") {
+                console.log(`[processManifest] Audio "${currentAssetKey}" processed (stub).`);
+                loadedAssetData = `Audio data for ${currentAssetKey}`;
+            } else {
+                console.warn(`[processManifest] Unknown asset type: ${asset.type} for key: ${currentAssetKey}`);
+                throw new Error(`Unknown asset type: ${asset.type}`);
+            }
+
+            // Asset considered successfully processed by processManifest at this point
+            loadedCount++; // Increment local success counter for processManifest's own summary
+            console.log(`[processManifest] SUCCESS for asset "${currentAssetKey}". Calling progressCallback with error=null.`);
+            if (progressCallback) progressCallback(currentAssetKey, null, loadedAssetData, loadedCount + failedCount, totalAssets);
+
+        } catch (error) {
+            failedCount++; // Increment local failure counter for processManifest's own summary
+            console.error(`[processManifest] CAUGHT ERROR for asset "${currentAssetKey}":`, error.message, error.stack);
+            console.log(`[processManifest] FAILURE for asset "${currentAssetKey}". Calling progressCallback with error object.`);
+            if (progressCallback) progressCallback(currentAssetKey, error, null, loadedCount + failedCount, totalAssets);
+        }
+        // Log status after each asset attempt using local counts
+        console.log(`[processManifest] After asset "${currentAssetKey}": Local Counts - Loaded: ${loadedCount}, Failed: ${failedCount} of ${totalAssets}`);
+    }
+
+    console.log(`[processManifest] Manifest loop COMPLETE. Local Counts - Expected: ${totalAssets}, Loaded: ${loadedCount}, Failed: ${failedCount}`);
+    console.log(`[processManifest] Calling completionCallback. Global Counts before call: Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
+    if (completionCallback) completionCallback(loadedCount, failedCount, totalAssets); // Use local counts for the summary passed to allAssetsProcessed
+    console.log(`%c[processManifest END] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
+}
+
+
