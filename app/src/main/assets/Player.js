@@ -1,95 +1,72 @@
 // Player.js
 import { Character } from './Character.js';
-import * as input from './input.js'; // IMPORT input.js HERE
-import * as globals from './globals.js'; // If needed for boundaries
+import * as input from './input.js';
+import * as globals from './globals.js'; // For boundaries, and potentially ANIMATIONS if not passed
 
 export class Player extends Character {
     constructor(x, y, animationName, spriteScale, health, speed) {
-        super(x, y, animationName, spriteScale, health, speed); // Passes to Character
+        // animationName is now the *initial* animation, e.g., "pickle_player_idle"
+        super(x, y, animationName, spriteScale, health, speed);
         this.entityType = "player";
-        // this.dx and this.dy are not strictly needed if all logic is in update
     }
 
-    // No need for separate move() and stopMovement() if all logic is in update
-
     update(deltaTime, currentTime, activeGameElements) {
-        // --- Logic from updatePickleMovement now goes here ---
-        if (!this.isActive) return; // Or just 'this' instead of 'pickleEntity'
+        if (!this.isActive) return;
 
-        let dXInput = 0; // Change in X based on input
-        let dYInput = 0; // Change in Y based on input
+        // --- Input and Movement Logic (largely the same as you had) ---
+        let dXInput = 0;
+        let dYInput = 0;
 
-        // Use the actions defined in input.js
-        if (input.isActionActive('moveUp')) {
-            dYInput -= 1;
-        }
-        if (input.isActionActive('moveDown')) {
-            dYInput += 1;
-        }
-        if (input.isActionActive('moveLeft')) {
-            dXInput -= 1;
-        }
-        if (input.isActionActive('moveRight')) {
-            dXInput += 1;
-        }
+        if (input.isActionActive('moveUp')) dYInput -= 1;
+        if (input.isActionActive('moveDown')) dYInput += 1;
+        if (input.isActionActive('moveLeft')) dXInput -= 1;
+        if (input.isActionActive('moveRight')) dXInput += 1;
 
-        // Normalize diagonal movement
         if (dXInput !== 0 && dYInput !== 0) {
             const length = Math.sqrt(dXInput * dXInput + dYInput * dYInput);
             dXInput = (dXInput / length);
             dYInput = (dYInput / length);
         }
 
-        // Apply movement
-        // Ensure this.speed is a valid number (initialized in Character/Player constructor)
-        // Ensure deltaTime is a valid number (passed as parameter)
-        if (isNaN(this.speed) || typeof this.speed !== 'number') {
-            console.error(`[Player.update] Invalid this.speed: ${this.speed}`);
-            return;
-        }
-        if (isNaN(deltaTime) || typeof deltaTime !== 'number') {
-            console.error(`[Player.update] Invalid deltaTime: ${deltaTime}`);
-            return;
-        }
-
-        // Update facing direction for sprite flipping based on input
-        if (dXInput > 0) this.facingDirection = 1;
+        if (dXInput > 0) this.facingDirection = 1; // Sprite class uses this
         else if (dXInput < 0) this.facingDirection = -1;
 
-        this.x += dXInput * this.speed * deltaTime;
+        this.x += dXInput * this.speed * deltaTime; // Character speed
         this.y += dYInput * this.speed * deltaTime;
 
-        // Log for NaN debugging
         if (isNaN(this.x) || isNaN(this.y)) {
             console.error(`[Player.update] x or y became NaN! x=${this.x}, y=${this.y}`);
-            console.error(`  dXInput=${dXInput}, dYInput=${dYInput}, this.speed=${this.speed}, deltaTime=${deltaTime}`);
-            // Potentially reset to a safe value or deactivate
-            // this.x = globals.nativeGameWidth / 2; // Example reset
-            // this.isActive = false;
+            // Reset or deactivate
         }
 
+        // Boundary checks
+        const playerWidth = this.width; // Width is now set by Sprite based on current frame
+        const playerHeight = this.height; // Height is now set by Sprite
 
-        // Optional: Keep Player within game boundaries
         const minX = 0;
-        // Make sure globals.nativeGameWidth and this.width are valid numbers
-        const maxX = globals.nativeGameWidth - this.width;
+        const maxX = globals.nativeGameWidth - playerWidth;
         const minY = 0;
-        const maxY = globals.nativeGameHeight - this.height;
+        const maxY = globals.nativeGameHeight - playerHeight;
 
         if (this.x < minX) this.x = minX;
         if (this.x > maxX) this.x = maxX;
         if (this.y < minY) this.y = minY;
         if (this.y > maxY) this.y = maxY;
-        // --- End of logic from updatePickleMovement ---
+        // --- End of Movement ---
 
-        // Animation state changes based on dXInput/dYInput
+        // --- Animation State Logic ---
+        // Player decides *which* animation to play based on its state.
+        // The Sprite class handles *how* to play it.
         if (dXInput !== 0 || dYInput !== 0) {
-            // this.setAnimation('your_walk_animation'); // Make sure setAnimation works
+            this.setAnimation('pickle_player_walk'); // Call Sprite's setAnimation method
         } else {
-            // this.setAnimation('your_idle_animation');
+            this.setAnimation('pickle_player_idle'); // Make sure these animation names exist in globals.ANIMATIONS
         }
 
-        super.update(deltaTime, currentTime, activeGameElements); // Call Character's update
+        // Call Character's update (which in turn calls Sprite's update for animation)
+        super.update(deltaTime, currentTime, activeGameElements);
     }
-}
 
+    // Player's draw method will be inherited from Character, which inherits from Sprite.
+    // No specific draw override needed here unless Player has unique visuals beyond the sprite.
+}
