@@ -81,17 +81,79 @@ function singleAssetProcessed(key, error, assetData, processedCount, totalToProc
     console.log(`%c[singleAssetProcessed END] Key: "${key}" - FailedCount: ${assetsFailedToLoadCount}, SuccessCount: ${assetsSuccessfullyLoadedCount}`, "color: magenta;");
 }
 
+// This function now handles loading manifest AND the first level's data
+async function loadPrerequisitesAndEnableStart() {
+    console.log("[Main.js] Core assets loaded. Now loading level manifest...");
+    const manifestLoaded = await levelManager.loadManifest('levels/levels-manifest.json'); // Adjust path
 
+    if (!manifestLoaded) {
+        console.error("[Main.js] CRITICAL: Level manifest failed to load.");
+        proceedToGameStartConditionCheck(false); // Indicate failure (to enable button)
+        return;
+    }
 
-// And this remains your completion callback:
-function allAssetsProcessed(successful, failed, totalInManifest) {
-    console.log(`[Main.js allAssetsProcessed] Manifest processing finished. Total: ${totalInManifest}, Successful: ${successful}, Failed: ${failed}`);
-    // Now call your original function that checks counts and enables the start button
-    proceedToGameStartConditionCheck();
+    console.log("[Main.js] Level manifest loaded. Now pre-loading default level data...");
+    // Preload the default level's data
+    const firstLevelDataLoaded = await levelManager.loadDefaultLevel(); // This method itself gets the data
 
+    if (!firstLevelDataLoaded) { // loadDefaultLevel would return the data or null
+        console.error("[Main.js] CRITICAL: Failed to pre-load default level data.");
+        proceedToGameStartConditionCheck(false); // Indicate failure
+        return;
+    }
+
+    console.log("[Main.js] Default level data pre-loaded successfully.");
+    proceedToGameStartConditionCheck(true); // Indicate ALL prerequisites are loaded
 }
 
+// allAssetsProcessed would call this new function
+function allAssetsProcessed(successful, failed, totalInManifest) {
+    console.log(`[Main.js allAssetsProcessed] Manifest (for assets) processing finished. Total: ${totalInManifest}, Successful: ${successful}, Failed: ${failed}`);
+    if (failed === 0) {
+        loadPrerequisitesAndEnableStart(); // Call the new function
+    } else {
+        proceedToGameStartConditionCheck(false);
+    }
+}
 
+// startGame() is now simpler because the initial level data is already loaded
+async function startGame() { // Still async due to other potential awaits, or just good practice
+    showGameControlsOverlay();
+    console.log("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
+
+    hideWelcomeScreen();
+    if (uiElements.gameLoadError) {
+        uiElements.gameLoadError.style.display = 'none';
+    }
+    playPooledSound('jump', 'sounds/gameOver.wav');
+
+    // --- Get PRELOADED Level Data ---
+    const initialLevelData = levelManager.getCurrentLevelData();
+
+    if (!initialLevelData) {
+        // This should ideally not happen if proceedToGameStartConditionCheck only enabled the button on success
+        console.error("CRITICAL: Initial level data is missing in startGame, even though it should have been preloaded.");
+        displayAssetLoadError("Error: Could not retrieve preloaded level data.");
+        return;
+    }
+    // --- End Get PRELOADED Level Data ---
+
+    setupSceneFromLevelData(initialLevelData);
+
+    // --- Game Loop and State Initialization (as before) ---
+    gameState.setGamePaused(false);
+    if (animationFrameId === null) {
+        // ... (rest of game loop start)
+        resizeCanvasAndCalculateScale();
+        lastTimestamp = performance.now();
+        gameTimeAccumulator = 0;
+        animationFrameId = requestAnimationFrame(gameLoop);
+        gameState.setGameStopped(false);
+    } else {
+        console.log("Game might be already running...");
+    }
+    console.log(`[Main.js startGame] Game initialized with preloaded level. Starting game loop.`);
+}
 
 
 // THIS IS THE RECOMMENDED VERSION
@@ -153,6 +215,63 @@ function proceedToGameStartConditionCheck() {
         }
     }
 }
+// In main.js
+
+// You'll need access to player, activeGameElements, etc.
+// Ensure these are defined in a scope accessible by this function and startGame/gameLoop
+
+function setupSceneFromLevelData(levelData) {
+    console.log("[Main.js] Setting up scene from level data:", levelData);
+    // 1. Clear previous level elements (VERY IMPORTANT for level transitions)
+    activeGameElements = []; // Reset the array
+    // If you have other specific cleanup (e.g., removing tilemap visuals), do it here.
+    // player = null; // Or re-initialize if player state carries over differently
+
+    // 2. Setup Player
+    if (levelData.playerStart) {
+        // Assuming createPicklePlayerInstance or new Player()
+        player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, 100, 100);
+        // If your player is part of activeGameElements for updates:
+         activeGameElements.push(player);
+    } else {
+        console.error("No playerStart defined in level data!");
+    }
+
+    // 3. Setup Enemies
+    if (levelData.enemies && Array.isArray(levelData.enemies)) {
+        levelData.enemies.forEach(enemyInfo => {
+            if (enemyInfo.type === "chef_patrol") {
+                // Assuming createPatrolingChef adds the enemy to activeGameElements
+                const chef = createPatrolingChef(
+                    enemyInfo.x, enemyInfo.y,
+                    "cheff_ketchup_walk", // Or from enemyInfo if it specifies animation
+                    globals.default_scale, // Or from enemyInfo
+                    enemyInfo.health || 100,
+                    enemyInfo.speed || 80,
+                    enemyInfo.patrolMinX, enemyInfo.patrolMaxX
+                );
+                // If createPatrolingChef doesn't add to activeGameElements, do it here:
+                 activeGameElements.push(chef);
+            }
+            // Add other enemy types as needed
+        });
+    }
+
+    // 4. Setup Tilemap (if you have one)
+    // if (levelData.tilemap && window.tilemapManager) { // Assuming a tilemapManager
+    //     window.tilemapManager.loadMap(levelData.tilemap);
+    // }
+
+    // 5. Setup Collectibles, etc.
+
+    console.log("[Main.js] Scene setup complete for level:", levelData.levelName || levelManager.getCurrentLevelInfo()?.id);
+
+    // Any other initializations specific to a new level starting
+    input.initInput(); // If input needs re-init per level or only once
+    hidePauseMenu();   // If applicable
+    score = 0;         // If score resets per level
+}
+
 
 // Ensure displayAssetLoadError is robust:
 function displayAssetLoadError(message) {
@@ -338,73 +457,6 @@ function gameLogic() {
     // console.log(`Current score: ${score}`);
 }
 
-function startGame() {
-    showGameControlsOverlay();
-    console.log("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
-
-    hideWelcomeScreen(); // Hide the menu/welcome screen
-    if (uiElements.gameLoadError) { // Hide any error messages if they were shown
-        uiElements.gameLoadError.style.display = 'none';
-    }
-
-    playPooledSound('jump', 'sounds/gameOver.wav'); // Assuming this sound ID is defined elsewhere or in HTML
-    gameState.setGamePaused(false);
-    if (animationFrameId === null) {
-        resizeCanvasAndCalculateScale();
-        hidePauseMenu();
-        console.log("Starting new game.");
-        score = 0;
-        initializeGame();
-        input.initInput();
-        console.log("Starting game loop.");
-        lastTimestamp = performance.now();
-        animationFrameId = requestAnimationFrame((timestamp) => gameLoop(timestamp)); // Removed liveGameArea argument
-        gameState.setGameStopped(false);
-    } else {
-        console.log("Game is already running, cannot start again.");
-    }
-
-
-
-
-
-    console.log(`%c[Main.js startGame] AFTER initializeGame, pPickle1.image is:`, 'color: teal; font-weight: bold;', pPickle1 ? pPickle1.image : "pPickle1 is null");
-
-    createPicklePlayerInstance(100,globals.nativeGameHeight - 85,"pickle_player_idle",globals.default_scale,100,100);//x, y, animationName, spriteScale
-
-    initializeGame(pPickle1); // Pass playerInstance if initializeGame needs it to add to activeGameElements
-
-    // --- END OF YOUR EXISTING GAME INITIALIZATION ---
-
-    console.log(`[Main.js startGame] Game initialized. Starting game loop.`);
-    if (!animationFrameId) {
-        lastTime = performance.now();
-        animationFrameId = requestAnimationFrame(gameLoop);
-    }
-
-    createPatrolingChef(200,
-        globals.nativeGameHeight - 150,
-        "cheff_ketchup_walk",
-        globals.default_scale,
-        50,
-        80,
-        0,
-        globals.nativeGameWidth);//x,y,animationName,spriteScale,health,speed,patrolMinX,patrolMaxX
-    // Add your main Pickle player to the game elements
-    if (pPickle1) { // Ensure it's defined
-        // You might need to set properties on pPickle1 if not set in constructor,
-        // e.g., pPickle1.speed = 200; pPickle1.width = 50; pPickle1.height = 80;
-        // Make sure these properties exist on the pPickle1 object/class instance.
-        //if (typeof pPickle1.speed === 'undefined') pPickle1.speed = 100; // Default speed
-        //if (typeof pPickle1.width === 'undefined') pPickle1.width = 32;   // Example default width
-        //if (typeof pPickle1.height === 'undefined') pPickle1.height = 48; // Example default height
-        activeGameElements.push(pPickle1);
-    }
-    if(eChef1){
-        activeGameElements.push(eChef1);
-    }
-
-}
 
 
 

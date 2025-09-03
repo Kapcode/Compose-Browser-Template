@@ -69,7 +69,7 @@ export const ANIMATIONS = {
     },
     "pickle_player_idle": {
         spriteSheetKey: MASTER_SPRITE_SHEET_KEY,
-        loop: true,
+        loop: false,
         defaultAnimationSpeedFPS: 5,
         baseMovementSpeed: 0,
         frames: [

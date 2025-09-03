@@ -103,7 +103,7 @@ word list/ question lists
 finish writing
 
 
-
+//todo LEVEL MANIFEST LOADING CHANGE TO Option B (Slightly More Complex): Load the level manifest concurrently with other assets if your assetManager can be extended to handle different types of "assets" (like JSON data files for the manifest). This might be overkill initially.
 
 
 
