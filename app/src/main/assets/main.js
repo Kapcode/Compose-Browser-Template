@@ -1,5 +1,6 @@
 import * as globals from './globals.js'; // Assuming globals.js now correctly defines its exports
 import * as assetManager from './assetManager.js';
+import { LevelManager } from './LevelManager.js';
 import * as input from './input.js';
 import { GameObject } from './GameObject.js';
 import { Sprite } from './Sprite.js';
@@ -24,6 +25,8 @@ console.log("-------------------------------------------");
 
 
 //canvas
+const levelManager = new LevelManager();
+let player; // Your player instance
 export let canvas = null; // Changed from top-level getElementById
 export let ctx = null;    // Changed from top-level getContext
 let activeGameElements = []; // Initialize as an empty array
