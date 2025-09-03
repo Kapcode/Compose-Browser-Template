@@ -1,9 +1,9 @@
 // Sprite.js
 // import { ANIMATIONS } from './globals.js'; // Your animation definitions (now with sprite names)
-// import { drawSprite, getSpriteData } from './assetManager.js'; // Or your graphics module
+// import { drawSprite, getSpriteData } from './AssetManager.js'; // Or your graphics module
 
-// Assuming assetManager.js exports getSpriteData() and masterSheetImage
-import * as assetManager from './assetManager.js';
+// Assuming AssetManager.js exports getSpriteData() and masterSheetImage
+import { assetManager } from './AssetManager.js';
 import { ANIMATIONS } from './globals.js'; // Assuming ANIMATIONS is in globals.js
 import { GameObject } from './GameObject.js'; // Assuming GameObject is the base
 

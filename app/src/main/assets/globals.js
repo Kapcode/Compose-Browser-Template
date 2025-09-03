@@ -95,6 +95,23 @@ export const ANIMATIONS = {
 };
 
 
+
+// In globals.js or a new tileConfig.js that you import
+export const TILE_CONFIG = {
+    TILE_SIZE: 64, // The width and height of your tiles in pixels
+    MAP: {
+        0: null, // 0 might mean an empty space, so no tile to draw
+        1: { spriteName: 'bricked_tile-23.png' }, // just brick Example sprite name from your master.json
+        2: { spriteName: 'bricked_tile-15.png' }, // slimed_brick
+        3: { spriteName: 'bricked_tile-6.png' }, //cracked brick
+        // Add more mappings as needed
+        // You can also add properties like:
+        // 4: { spriteName: 'lava.png', isSolid: true, isHarmful: true },
+    }
+};
+
+// Ensure this is accessible, e.g., by importing globals or TILE_CONFIG
+
 // --- DOM Element References (Exported as null, initialized in main.js) ---
 // It's often better to manage DOM elements in the module that directly uses them (main.js or a UI module)
 // or pass them around, rather than making them "global" references modified from elsewhere.

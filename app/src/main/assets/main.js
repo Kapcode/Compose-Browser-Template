@@ -1,5 +1,5 @@
 import * as globals from './globals.js'; // Assuming globals.js now correctly defines its exports
-import * as assetManager from './assetManager.js';
+import { assetManager } from './AssetManager.js';//import assetManager singlton
 import { LevelManager } from './LevelManager.js';
 import * as input from './input.js';
 import { GameObject } from './GameObject.js';
@@ -11,8 +11,10 @@ import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
 import { pPickle1, createPicklePlayerInstance } from './PickleMan.js';
 import { eChef1, createPatrolingChef } from './ChefEnemy.js';
-import * as camera from './camera.js';
+import { Camera } from './Camera.js';
 import * as gameState from './gameState.js'
+import { TilemapRenderer } from './TilemapRenderer.js';
+import { TILE_CONFIG } from './globals.js'; //
 // ---- IMMEDIATELY LOG THESE VALUES ----
 console.log("-------------------------------------------");
 console.log("[Main.js] AT VERY TOP OF MAIN.JS:");
@@ -26,9 +28,22 @@ console.log("-------------------------------------------");
 
 //canvas
 const levelManager = new LevelManager();
+let tilemapRenderer = null;
 let player; // Your player instance
 export let canvas = null; // Changed from top-level getElementById
 export let ctx = null;    // Changed from top-level getContext
+// Expose camera globally or pass it around as needed
+window.camera = null; // Or 'let camera = null;' if not needing global window access
+// In your main initialization (e.g., DOMContentLoaded or before first game start)
+function initializeCoreGameSystems() {
+    // ...
+    // Initialize camera - initially, world size might be unknown or default
+    // Canvas width/height might come from your 'liveGameArea' or 'canvas' element
+    const canvas = document.getElementById('gameArea'); // Assuming you have one
+    window.camera = new Camera(0, 0, canvas.width, canvas.height, 0, 0); // Start with 0 world size
+    console.log("[Main.js] Camera initialized.");
+    // ...
+}
 let activeGameElements = []; // Initialize as an empty array
 //game area
 let gameAreaViewBoxWidth = 0;
@@ -258,6 +273,31 @@ function setupSceneFromLevelData(levelData) {
     }
 
     // 4. Setup Tilemap (if you have one)
+    if (levelData.tilemap) {
+        tilemapRenderer = new TilemapRenderer(levelData.tilemap, TILE_CONFIG);
+        console.log("[Main.js] TilemapRenderer created.");
+        // UPDATE CAMERA'S WORLD SIZE
+        if (window.camera && tilemapRenderer) {
+            window.camera.setWorldSize(tilemapRenderer.getMapWidth(), tilemapRenderer.getMapHeight());
+        }
+    } else {
+        tilemapRenderer = null;
+        if (window.camera) {
+            window.camera.setWorldSize(window.camera.width, window.camera.height); // Or some default
+        }
+    }
+
+
+    // SET CAMERA TARGET
+    if (window.camera && player) { // Assuming 'player' is your player instance
+        window.camera.follow(player);
+        // Optionally, immediately snap camera to player start without damping for the first frame
+        // window.camera.x = player.x + (player.width / 2) - (window.camera.width / 2);
+        // window.camera.y = player.y + (player.height / 2) - (window.camera.height / 2);
+        // window.camera.update(); // Force one update to clamp
+    }
+
+
     // if (levelData.tilemap && window.tilemapManager) { // Assuming a tilemapManager
     //     window.tilemapManager.loadMap(levelData.tilemap);
     // }
@@ -365,87 +405,50 @@ function setPauseState(pause) {
 
 const MAX_DELTA_TIME = 0.01666666667; // Approx 60 FPS fixed time step
 
+// main.js - inside gameLoop, before drawing
 function gameLoop(currentTimestamp) {
-    if (!canvas || !ctx) { // Ensure canvas and context are available
-        console.error("Canvas or context not initialized. Stopping game loop.");
-        gameState.setGameStopped(true);
-        return;
-    }
-
-    // Update camera (before any drawing related to world objects)
-    if (window.camera) { // Make sure camera is defined
-        window.camera.update();
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Apply camera transformations
-    if (window.camera) {
-        window.camera.apply(ctx);
-    }
-    if (!liveGameArea) { // liveGameArea is the canvas
-        console.error("CRITICAL: liveGameArea (canvas) not found! Stopping loop.");
-        gameState.setGameStopped(true);
-        return;
-    }
-
-    if (gameState.gameStopped) {
-        if (gameStateLogs) console.log("Game is stopped. Game loop terminated.");
-        return;
-    }
-
-    if (lastTimestamp === 0) {
-        lastTimestamp = currentTimestamp;
-        animationFrameId = requestAnimationFrame(gameLoop);
-        return;
-    }
-
-    let deltaTime = (currentTimestamp - lastTimestamp) / 1000;
-
-    if (gameState.gamePaused) {
-        if (gameStateLogs) console.log("GameLoop: Game is paused. Skipping updates.");
-        animationFrameId = requestAnimationFrame(gameLoop);
-        return;
-    }
-
-    lastTimestamp = currentTimestamp;
-
-    if (deltaTime <= 0) {
-        animationFrameId = requestAnimationFrame(gameLoop);
-        return;
-    }
-
-    const MAX_POSSIBLE_DELTA_TIME = 0.5;
-    if (deltaTime > MAX_POSSIBLE_DELTA_TIME) {
-        console.warn(`GameLoop: Large deltaTime (${deltaTime}) capped to ${MAX_POSSIBLE_DELTA_TIME}.`);
-        deltaTime = MAX_POSSIBLE_DELTA_TIME;
-    }
-
-    gameTimeAccumulator += deltaTime;
-    gameTimeAccumulator += deltaTime;
-    let updateCycles = 0; // <--- Add this
-    while (gameTimeAccumulator >= MAX_DELTA_TIME) {
-        if (!gameState.gamePaused) {
-            // ...
-            updateGameElements(MAX_DELTA_TIME, currentTimestamp);
-        }
-        gameTimeAccumulator -= MAX_DELTA_TIME;
-        updateCycles++; // <--- Add this
-    }
-    if (updateCycles > 1) { // Log if multiple updates happened
-       // console.log("GameLoop: Update cycles in this frame:", updateCycles);
-    }
-    if (updateCycles === 0) { // Log if no updates happened (can happen if frame rate is very high)
-        console.log("GameLoop: Zero update cycles in this frame. gameTimeAccumulator:", gameTimeAccumulator);
-    }
+    // ... (delta time calculation, handle pause/stop) ...
 
     if (!gameState.gamePaused) {
-        drawGameElements(ctx);
+        // UPDATE GAME LOGIC
+        if (window.camera) { // Make sure camera is defined
+            window.camera.update(); // Update camera position based on target
+        }
+        updateGameElements(MAX_DELTA_TIME, currentTimestamp); // Update player, enemies, etc.
     }
-    // Release camera transformations
-    if (window.camera) {
-        window.camera.release(ctx);
-    }
-    animationFrameId = requestAnimationFrame(gameLoop);
 
+    // DRAWING
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear entire canvas
+
+    if (window.camera) {
+        window.camera.apply(ctx); // Apply camera transformations (translate)
+    }
+
+    // Draw tilemap (it uses world coordinates, camera translation handles the rest)
+    if (tilemapRenderer) {
+        tilemapRenderer.draw(ctx, window.camera); // Pass camera for culling optimization
+    }
+
+    // Draw player, enemies, collectibles, etc. (they use world coordinates)
+    activeGameElements.forEach(element => {
+        if (element && typeof element.draw === 'function') {
+            element.draw(ctx);
+        }
+    });
+    // Don't forget the player if it's not in activeGameElements but drawn separately
+    // if (player && typeof player.draw === 'function') {
+    // player.draw(ctx);
+    // }
+
+
+    if (window.camera) {
+        window.camera.end(ctx); // Restore context before drawing UI
+    }
+
+    // Draw UI elements (score, health, pause menu button - these should NOT scroll)
+    // uiManager.draw(ctx);
+
+    animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 function gameLogic() {
@@ -867,6 +870,11 @@ function drawGameElements(passedCtx) {
                 passedCtx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
             }
 
+            //==============================================todo/..///////////////////////camera tilemap=====================
+            if (tilemapRenderer) {
+                tilemapRenderer.draw(ctx, window.camera); // Pass the camera to the tilemap's draw method
+            }
+            // =====================================///////todo/..///////////////////////camera tilemap
             activeGameElements.forEach(element => {
                 if (element.isActive && typeof element.draw === 'function') {
                     element.draw(passedCtx);
@@ -945,6 +953,7 @@ function resizeCanvasAndCalculateScale() {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+    initializeCoreGameSystems();
     canvas = document.getElementById('gameArea');
     if (canvas) {
         ctx = canvas.getContext('2d');

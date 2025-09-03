@@ -1,6 +1,6 @@
 import { Character } from './Character.js';
 import * as globals from './globals.js';
-import * as assetManager from './assetManager.js';
+import { assetManager } from './AssetManager.js';//import assetManager singlton
 export class EnemyPatrol extends Character {
     constructor(x, y, animationName, spriteScale, health, speed, patrolMinX, patrolMaxX) {
         // Assumes Character/Sprite constructor correctly uses globals.ANIMATIONS
