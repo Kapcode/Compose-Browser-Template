@@ -30,28 +30,54 @@ const keyMap = {
 
 // --- Event Listeners ---
 function handleKeyDown(event) {
-    const key = event.key; // e.g., "ArrowLeft", "a", " "
-    keyStates[key.toLowerCase()] = true; // Store raw key state
+    const originalKey = event.key; // Keep original if needed for some specific reason, or just use event.key directly
+    const processedKey = originalKey.toLowerCase(); // Convert to lowercase for map lookup and state storage
 
-    const action = keyMap[key]; // Check if this key is mapped to an action
+    keyStates[processedKey] = true; // Store raw key state using the lowercase version
+
+    // Use the lowercase key for map lookup
+    const action = keyMap[processedKey];
+    // OR if some keys in keyMap should remain case-sensitive (like 'Shift' vs 'shift' if you cared)
+    // you might need a more nuanced approach, but for WASD, lowercase is what you want.
+    // For general character keys like 'a', 'w', 's', 'd', 'p', 'm', you definitely want to check the lowercase version.
+    // For special keys like 'ArrowLeft', 'Enter', 'Control', 'Shift', 'Escape', their names don't change with CapsLock.
+    // So, a smart way is:
+    // const lookupKey = (originalKey.length === 1) ? originalKey.toLowerCase() : originalKey;
+    // const action = keyMap[lookupKey];
+
+    // Simpler: If your keyMap is ALL lowercase for character keys, then always use lowercase:
+    // const action = keyMap[processedKey]; <--- THIS is what you want for WASD
+
     if (action) {
         actionStates[action] = true;
-        // console.log(`Action started: ${action}`);
+        // Logger.debug('Input', `Action started: ${action} (Key: ${originalKey} -> ${processedKey})`);
+    } else {
+        // Optional: Check if the original key (if different from lowercase) is in the map
+        // This handles cases where your keyMap might have "Shift" but not "shift"
+        const fallbackAction = keyMap[originalKey];
+        if (fallbackAction) {
+            actionStates[fallbackAction] = true;
+            // Logger.debug('Input', `Action started: ${fallbackAction} (Key: ${originalKey} - direct map)`);
+        }
     }
-    // Optional: Prevent default browser behavior for certain keys (e.g., space scrolling)
-    // if (action === 'jump' || action === 'fire') {
-    //     event.preventDefault();
-    // }
 }
 
 function handleKeyUp(event) {
-    const key = event.key;
-    keyStates[key.toLowerCase()] = false; // Store raw key state
+    const originalKey = event.key;
+    const processedKey = originalKey.toLowerCase();
 
-    const action = keyMap[key];
+    keyStates[processedKey] = false;
+
+    const action = keyMap[processedKey];
     if (action) {
         actionStates[action] = false;
-        // console.log(`Action ended: ${action}`);
+        // Logger.debug('Input', `Action ended: ${action} (Key: ${originalKey} -> ${processedKey})`);
+    } else {
+        const fallbackAction = keyMap[originalKey];
+        if (fallbackAction) {
+            actionStates[fallbackAction] = false;
+            // Logger.debug('Input', `Action ended: ${fallbackAction} (Key: ${originalKey} - direct map)`);
+        }
     }
 }
 

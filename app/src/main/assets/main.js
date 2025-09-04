@@ -20,7 +20,7 @@ import { Logger } from './logger.js';//todo import logger in all other files
 
 
 // --- Initialize Log Level (typically once at application start) ---
-Logger.setLogLevel(Logger.LEVELS.DEBUG); // Or whatever level you want
+Logger.setLogLevel(Logger.LEVELS.TRACE); // Or whatever level you want//todo change for release
 
 // --- Example Log Calls ---
 Logger.always('AppInit', 'Application Core Initialized.');
@@ -268,7 +268,7 @@ function setupSceneFromLevelData(levelData) {
     // 2. Setup Player
     if (levelData.playerStart) {
         // Assuming createPicklePlayerInstance or new Player()
-        player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, 100, 100);
+        player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, globals.default_player_health, globals.default_player_speed);//last is speed
         // If your player is part of activeGameElements for updates:
          activeGameElements.push(player);
         window.camera.follow(player);

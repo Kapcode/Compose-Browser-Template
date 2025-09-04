@@ -36,11 +36,11 @@ export class Camera {
     }
 
     update() {
-        Logger.trace(`update(IN UPDATE) called. Target: ${this.target ? this.target.name : 'None'}`);
+        //Logger.trace(`update(IN UPDATE) called. Target: ${this.target ? this.target.name : 'None'}`);
         // Log 'this' itself to see what object 'this' refers to
         Logger.trace("[Camera UPDATE method] 'this' refers to:", this);
         // Log this.target directly
-        Logger.trace(`[Camera UPDATE method] (Line 37-ish) this.target is:`, this.target); // Your existing log, ensure it's using 'this.target'
+        Logger.trace(`[Camera UPDATE method] (Line 40-ish) this.target is:`, this.target,this.worldWidth,this.worldHeight); // Your existing log, ensure it's using 'this.target'
 
         if (!this.target) {
             return;
@@ -53,12 +53,12 @@ export class Camera {
         // --- Simpler follow logic (without dead zone or damping) ---
         // this.x = idealX;
         // this.y = idealY;
-
+        Logger.trace(`[Camera UPDATE method] this x,y before damping position: x: ${this.x}, y: ${this.y}`);
         // --- Follow logic with Damping ---
         // Interpolate towards the ideal position
         this.x += (idealX - this.x) * this.damping;
         this.y += (idealY - this.y) * this.damping;
-
+        Logger.trace(`[Camera UPDATE method] this x,y after damping position: x: ${this.x}, y: ${this.y}`);
 
         // --- Follow logic with Dead Zone (more complex, can be added later if needed) ---
         // // Horizontal dead zone
@@ -86,16 +86,29 @@ export class Camera {
 
         // Clamp camera to world boundaries
         // Ensure camera doesn't show areas outside the map
-        if (this.worldWidth > 0) { // Only clamp if worldWidth is meaningful
-            this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.width));
+        // Inside clampToWorld() or the end of update()
+
+        if (this.worldWidth > 0) {
+            if (this.width >= this.worldWidth) { // If camera is wider than or same as world
+                this.x = (this.worldWidth - this.width) / 2; // Center it (will be negative or zero)
+            } else { // Camera is narrower than world
+                this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.width));
+            }
         } else {
-            this.x = 0; // Or some default if world is not defined yet
+            this.x = 0;
         }
-        if (this.worldHeight > 0) { // Only clamp if worldHeight is meaningful
-            this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.height));
+
+        if (this.worldHeight > 0) {
+            if (this.height >= this.worldHeight) { // If camera is taller than or same as world
+                this.y = (this.worldHeight - this.height) / 2; // Center it (will be negative or zero)
+            } else { // Camera is shorter than world
+                this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.height));
+            }
         } else {
             this.y = 0;
         }
+
+        Logger.trace(`[Camera UPDATE method] Camera position after clamping: x: ${this.x}, y: ${this.y}`);
     }
 
     // Call this before drawing any world objects

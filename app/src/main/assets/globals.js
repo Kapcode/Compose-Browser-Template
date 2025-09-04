@@ -40,6 +40,9 @@ export function setSpriteSheetLoadStatus(status) {
 
 // --- Default Scale for Entities ---
 export const default_scale = 1.0;
+export const default_player_health = 100;
+export const default_player_speed = 500;
+
 
 // In globals.js
 export const ANIMATIONS = {
