@@ -23,6 +23,7 @@
 // ./AssetManager.js
 import * as globals from './globals.js'; // Keep this
 import { ctx} from './main.js'; // Keep this
+
 // 1. DEFINE THE CLASS
 export class AssetManager { // It's often good to export the class name itself too
     constructor() {

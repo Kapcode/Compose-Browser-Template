@@ -1,4 +1,5 @@
 // Camera.js
+import { Logger } from './logger.js';
 export class Camera {
     constructor(x, y, width, height, worldWidth, worldHeight) {
         this.x = x; // Camera's top-left position in the game WORLD
@@ -16,30 +17,30 @@ export class Camera {
         // For smoother following (damping)
         this.damping = 0.05; // Lower value = smoother/slower follow, 1 = instant follow
 
-        console.log(`[Camera] Initialized. Viewport: ${width}x${height}, World: ${worldWidth}x${worldHeight}`);
+        Logger.trace(`[Camera] Initialized. Viewport: ${width}x${height}, World: ${worldWidth}x${worldHeight}`);
     }
 
     follow(target) {
         this.target = target;
-        console.log("%c CAMERA FOLLOW CALLED! Target:", "background:yellow; color:black;", window.camera.target);
-        console.log("[Camera] Now following target:", this.target);
+        Logger.trace("%c CAMERA FOLLOW CALLED! Target:", "background:yellow; color:black;", window.camera.target);
+        Logger.trace("[Camera] Now following target:", this.target);
     }
 
     setWorldSize(worldWidth, worldHeight) {
         this.worldWidth = worldWidth;
         this.worldHeight = worldHeight;
-        console.log(`[Camera] World size updated to: ${worldWidth}x${worldHeight}`);
+        Logger.trace(`[Camera] World size updated to: ${worldWidth}x${worldHeight}`);
         // Re-clamp camera position if necessary
         this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.width));
         this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.height));
     }
 
     update() {
-        console.log(`update(IN UPDATE) called. Target: ${this.target ? this.target.name : 'None'}`);
+        Logger.trace(`update(IN UPDATE) called. Target: ${this.target ? this.target.name : 'None'}`);
         // Log 'this' itself to see what object 'this' refers to
-        console.log("[Camera UPDATE method] 'this' refers to:", this);
+        Logger.trace("[Camera UPDATE method] 'this' refers to:", this);
         // Log this.target directly
-        console.log(`[Camera UPDATE method] (Line 37-ish) this.target is:`, this.target); // Your existing log, ensure it's using 'this.target'
+        Logger.trace(`[Camera UPDATE method] (Line 37-ish) this.target is:`, this.target); // Your existing log, ensure it's using 'this.target'
 
         if (!this.target) {
             return;
@@ -48,7 +49,7 @@ export class Camera {
         // Calculate the ideal camera position to center the target
         let idealX = this.target.x + (this.target.width / 2) - (this.width / 2);
         let idealY = this.target.y + (this.target.height / 2) - (this.height / 2);
-        console.log(`[Camera UPDATE method] Ideal position: x: ${idealX}, y: ${idealY}`);
+        Logger.trace(`[Camera UPDATE method] Ideal position: x: ${idealX}, y: ${idealY}`);
         // --- Simpler follow logic (without dead zone or damping) ---
         // this.x = idealX;
         // this.y = idealY;

@@ -1,6 +1,7 @@
 // TilemapRenderer.js
 import * as globals from './globals.js';
 import { assetManager} from './AssetManager.js';
+import { Logger } from './logger.js';
 export class TilemapRenderer {
     constructor(levelTileData, tileConfig) {
         this.tileData = levelTileData; // The tilemap array from levelX.json (e.g., [[1,0,1], [2,2,0]])
@@ -15,26 +16,26 @@ export class TilemapRenderer {
         this.spriteData = assetManager.getSpriteData(); // For the JSON data
         this.masterSheet = assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY); // MASTER_SPRITE_SHEET_KEY is likely "master_spritesheet"
         if (!this.masterSheet || !this.masterSpriteData) {
-            console.error("TilemapRenderer: Master spritesheet or sprite data not found!");
+            Logger.error("TilemapRenderer: Master spritesheet or sprite data not found!");
             // Your new log:
-            console.log(`[TilemapRenderer] Master Sheet:`, this.masterSheet); // This prints null
+            Logger.trace(`[TilemapRenderer] Master Sheet:`, this.masterSheet); // This prints null
         }
-        console.log(`[TilemapRenderer] Initialized for a ${this.cols}x${this.rows} map with tileSize ${this.tileSize}.`);
+        Logger.trace(`[TilemapRenderer] Initialized for a ${this.cols}x${this.rows} map with tileSize ${this.tileSize}.`);
     }
 
     draw(ctx, camera, options = {}) { // Pass the camera object to the draw method
         const bufferl = options.bufferTiles !== undefined ? Math.max(0, options.bufferTiles) : 0;
-        console.log("EFFECTIVE BUFFER VALUE:", bufferl);
+        Logger.trace("EFFECTIVE BUFFER VALUE:", bufferl);
         if (!this.masterSheet || !this.masterSpriteData || !this.tileData) {
-            console.warn("[TilemapRenderer.draw] Assets not ready or tileData missing.");
+            Logger.warn("[TilemapRenderer.draw] Assets not ready or tileData missing.");
             return;
         }
         if (!camera || camera.x === undefined || camera.y === undefined || camera.width === undefined || camera.height === undefined) {
-            console.warn("[TilemapRenderer.draw] Invalid camera object provided.");
+            Logger.warn("[TilemapRenderer.draw] Invalid camera object provided.");
             return;
         }
         if (!this.tileSize || this.tileSize <= 0) {
-            console.warn("[TilemapRenderer.draw] Invalid tileSize.");
+            Logger.warn("[TilemapRenderer.draw] Invalid tileSize.");
             return;
         }
 
@@ -54,23 +55,23 @@ export class TilemapRenderer {
         const endRow = calculatedEndRow + buffer; // Or just calculatedEndRow + buffer;
         // --- END OF ADDED LINES ---
 
-        console.log("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
+        Logger.trace("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
 
 
 
 
         // --- DETAILED LOGS ---
-       // console.log(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
-        //console.log(`%c  Camera Viewport: x=${camX.toFixed(2)}, y=${camY.toFixed(2)}, w=${camWidth}, h=${camHeight}`, "color: blue;");
-        //console.log(`%c  Tile Size: ${tileSize}`, "color: blue;");
-        //console.log(`%c  Calculated Tile Indices: startCol=${startCol}, endCol=${endCol}, startRow=${startRow}, endRow=${endRow}`, "color: green; font-weight: bold;");
+       // Logger.trace(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
+        //Logger.trace(`%c  Camera Viewport: x=${camX.toFixed(2)}, y=${camY.toFixed(2)}, w=${camWidth}, h=${camHeight}`, "color: blue;");
+        //Logger.trace(`%c  Tile Size: ${tileSize}`, "color: blue;");
+        //Logger.trace(`%c  Calculated Tile Indices: startCol=${startCol}, endCol=${endCol}, startRow=${startRow}, endRow=${endRow}`, "color: green; font-weight: bold;");
 
         // Calculate which part of the map is visible through the camera
         let viewStartCol = Math.floor(camera.x / this.tileSize);
         let viewEndCol = Math.ceil((camera.x + camera.width) / this.tileSize);
         let viewStartRow = Math.floor(camera.y / this.tileSize);
         let viewEndRow = Math.ceil((camera.y + camera.height) / this.tileSize);
-        console.log(`[TM VIEW] View Tile Range: C(${viewStartCol}-${viewEndCol}), R(${viewStartRow}-${viewEndRow})`);
+        Logger.trace(`[TM VIEW] View Tile Range: C(${viewStartCol}-${viewEndCol}), R(${viewStartRow}-${viewEndRow})`);
 
 
         const bufferedStartCol = viewStartCol - buffer;
@@ -87,14 +88,14 @@ export class TilemapRenderer {
         const clampedEndCol = Math.min(this.cols - 1, bufferedEndCol); // Uses bufferedEndCol
         const clampedStartRow = Math.max(0, bufferedStartRow);         // Uses bufferedStartRow
         const clampedEndRow = Math.min(this.rows - 1, bufferedEndRow); // Uses bufferedEndRow
-        console.log(`[TM BUFFERED] Buffered Tile Range (pre-clamp): C(${bufferedStartCol}-${bufferedEndCol}), R(${bufferedStartRow}-${bufferedEndRow})`);
+        Logger.trace(`[TM BUFFERED] Buffered Tile Range (pre-clamp): C(${bufferedStartCol}-${bufferedEndCol}), R(${bufferedStartRow}-${bufferedEndRow})`);
 
-        console.log("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
+        Logger.trace("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
         // Clamp to map boundaries
-        console.log(`[TM CLAMPED] Final Loop Tile Range: C(${clampedStartCol}-${clampedEndCol}), R(${clampedStartRow}-${clampedEndRow})`);
+        Logger.trace(`[TM CLAMPED] Final Loop Tile Range: C(${clampedStartCol}-${clampedEndCol}), R(${clampedStartRow}-${clampedEndRow})`);
 
         // Your old log line for PlayerY can stay
-        console.log(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
+        Logger.trace(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
         // Remove or comment out your old line 69 log to avoid confusion with the new ones above.
 
 
@@ -129,7 +130,7 @@ export class TilemapRenderer {
                             screenDrawX, screenDrawY, this.tileSize, this.tileSize
                         );
                     } else {
-                        // console.warn(`TilemapRenderer: Sprite '${tileTypeInfo.spriteName}' not found in master sheet data for tile ID ${tileId}.`);
+                        // Logger.warn(`TilemapRenderer: Sprite '${tileTypeInfo.spriteName}' not found in master sheet data for tile ID ${tileId}.`);
                     }
                 }
             }

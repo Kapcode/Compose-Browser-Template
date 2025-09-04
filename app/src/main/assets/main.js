@@ -15,15 +15,30 @@ import { Camera } from './Camera.js';
 import * as gameState from './gameState.js'
 import { TilemapRenderer } from './TilemapRenderer.js';
 import { TILE_CONFIG } from './globals.js'; //
+import { Logger } from './logger.js';//todo import logger in all other files
+//todo change Logger.info to Logger. calls
+
+
+// --- Initialize Log Level (typically once at application start) ---
+Logger.setLogLevel(Logger.LEVELS.DEBUG); // Or whatever level you want
+
+// --- Example Log Calls ---
+Logger.always('AppInit', 'Application Core Initialized.');
+//Logger.info('GameManager', 'Level 5 started.');
+//Logger.error('AssetLoader', 'Failed to load critical asset: "player.png"');
+//Logger.debug('PlayerMovement', 'Player position:', player.x, player.y);
+//Logger.trace('TilemapRenderer', 'Rendering tile at:', col, row);
+
+
 // ---- IMMEDIATELY LOG THESE VALUES ----
-console.log("-------------------------------------------");
-console.log("[Main.js] AT VERY TOP OF MAIN.JS:");
-console.log("[Main.js] typeof globals:", typeof globals);
-console.log("[Main.js] globals object:", globals); // This will show all exported members from globals.js
-console.log("[Main.js] typeof globals.SPRITE_SHEET_PATH:", typeof globals.SPRITE_SHEET_PATH);
-console.log("[Main.js] Value of globals.SPRITE_SHEET_PATH:", globals.SPRITE_SHEET_PATH);
-console.log("[Main.js] Value of globals.MASTER_SPRITE_SHEET_KEY:", globals.MASTER_SPRITE_SHEET_KEY);
-console.log("-------------------------------------------");
+Logger.info("-------------------------------------------");//todo just testing out the logger here
+Logger.info("[Main.js] AT VERY TOP OF MAIN.JS:");
+Logger.info("[Main.js] typeof globals:", typeof globals);
+Logger.info("[Main.js] globals object:", globals); // This will show all exported members from globals.js
+Logger.info("[Main.js] typeof globals.SPRITE_SHEET_PATH:", typeof globals.SPRITE_SHEET_PATH);
+Logger.info("[Main.js] Value of globals.SPRITE_SHEET_PATH:", globals.SPRITE_SHEET_PATH);
+Logger.info("[Main.js] Value of globals.MASTER_SPRITE_SHEET_KEY:", globals.MASTER_SPRITE_SHEET_KEY);
+Logger.info("-------------------------------------------");
 
 
 //canvas
@@ -46,11 +61,11 @@ function initializeCoreGameSystems() {
     const gameWorldWidth = 10000; // Example: Replace with actual level width
     const gameWorldHeight = 10000; // Example: Replace with actual level heigh
     const canvas = document.getElementById('gameArea'); // Assuming you have one
-    console.log(`[Main.js PRE-CAMERA] [Camera] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
+    Logger.info(`[Main.js PRE-CAMERA] [Camera] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
     window.camera = new Camera(0, 0, canvas.width, canvas.height,gameWorldWidth, gameWorldHeight); // Start with 0 world size
-    console.log(`[Main.js PRE-CAMERA  [Camera]--post constructor] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
+    Logger.info(`[Main.js PRE-CAMERA  [Camera]--post constructor] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
 
-    console.log("[Main.js] Camera initialized.");
+    Logger.info("[Main.js] Camera initialized.");
     // ...
 }
 let activeGameElements = []; // Initialize as an empty array
@@ -62,12 +77,9 @@ let liveGameArea = null; // This will also be the canvas
 export let debugDraw = true;
 
 //game state
-
-
 export let animationFrameId = null; // ID from requestAnimationFrame
 
 export const gameStateLogs = false;
-
 
 // --- Game Loop Timing ---
 export let gameTimeAccumulator = 0;
@@ -80,7 +92,6 @@ export const SPAWN_INTERVAL_FRAMES = 120; // Example
 export let score = 0;
 
 
-
 //assets/////////////////////////////////////////////////////
 let assetsToLoadCount = 0; // <<<< DECLARED HERE (Correct) ..PalmFace
 let assetsSuccessfullyLoadedCount = 0;
@@ -88,51 +99,49 @@ let assetsFailedToLoadCount = 0;
 // THIS IS THE CORRECT VERSION for the progressCallback of processManifest
 // In main.js
 function singleAssetProcessed(key, error, assetData, processedCount, totalToProcess) {
-    console.log(`%c[singleAssetProcessed START] Key: "${key}"`, "color: magenta;");
-    console.log(`[singleAssetProcessed] Received 'error' argument:`, error);
-    console.log(`[singleAssetProcessed] typeof error: ${typeof error}`);
-    console.log(`[singleAssetProcessed] Boolean(error) evaluation: ${Boolean(error)}`);
-
+    Logger.info(`%c[singleAssetProcessed START] Key: "${key}"`, "color: magenta;");
     if (error) { // This is where assetsFailedToLoadCount is incremented
-        console.error(`[singleAssetProcessed] 'error' is TRUTHY. Incrementing assetsFailedToLoadCount.`);
+        Logger.error(`[singleAssetProcessed] Received 'error' argument:`, error);//todo put all this error print into one call
+        Logger.error(`[singleAssetProcessed] typeof error: ${typeof error}`);
+        Logger.error(`[singleAssetProcessed] Boolean(error) evaluation: ${Boolean(error)}`);
+        //Logger.error(`[singleAssetProcessed] 'error' is TRUTHY. Incrementing assetsFailedToLoadCount.`);
         assetsFailedToLoadCount++;
-        console.error(`[Main.js] Failed to load asset: "${key}". Error details: ${error.message || error}. Total FAILED: ${assetsFailedToLoadCount}`);
+        Logger.error(`[Main.js] Failed to load asset: "${key}". Error details: ${error.message || error}. Total FAILED: ${assetsFailedToLoadCount}`);
     } else {
-        console.log(`[singleAssetProcessed] 'error' is FALSY. Incrementing assetsSuccessfullyLoadedCount.`);
+        Logger.info(`[singleAssetProcessed] 'error' is FALSY. Incrementing assetsSuccessfullyLoadedCount.`);
         assetsSuccessfullyLoadedCount++;
-        console.log(`[Main.js] Successfully loaded asset: "${key}". Loaded data:`, assetData, `Total SUCCESSFUL: ${assetsSuccessfullyLoadedCount}`);
+        Logger.info(`[Main.js] Successfully loaded asset: "${key}". Loaded data:`, assetData, `Total SUCCESSFUL: ${assetsSuccessfullyLoadedCount}`);
     }
-    console.log(`%c[singleAssetProcessed END] Key: "${key}" - FailedCount: ${assetsFailedToLoadCount}, SuccessCount: ${assetsSuccessfullyLoadedCount}`, "color: magenta;");
+    Logger.info(`%c[singleAssetProcessed END] Key: "${key}" - FailedCount: ${assetsFailedToLoadCount}, SuccessCount: ${assetsSuccessfullyLoadedCount}`, "color: magenta;");
 }
 
 // This function now handles loading manifest AND the first level's data
 async function loadPrerequisitesAndEnableStart() {
-    console.log("[Main.js] Core assets loaded. Now loading level manifest...");
+    Logger.info("[Main.js] Core assets loaded. Now loading level manifest...");
     const manifestLoaded = await levelManager.loadManifest('levels/levels-manifest.json'); // Adjust path
-
     if (!manifestLoaded) {
-        console.error("[Main.js] CRITICAL: Level manifest failed to load.");
+        Logger.error("[Main.js] CRITICAL: Level manifest failed to load.");
         proceedToGameStartConditionCheck(false); // Indicate failure (to enable button)
         return;
     }
 
-    console.log("[Main.js] Level manifest loaded. Now pre-loading default level data...");
+    Logger.info("[Main.js] Level manifest loaded. Now pre-loading default level data...");
     // Preload the default level's data
     const firstLevelDataLoaded = await levelManager.loadDefaultLevel(); // This method itself gets the data
 
     if (!firstLevelDataLoaded) { // loadDefaultLevel would return the data or null
-        console.error("[Main.js] CRITICAL: Failed to pre-load default level data.");
+        Logger.error("[Main.js] CRITICAL: Failed to pre-load default level data.");
         proceedToGameStartConditionCheck(false); // Indicate failure
         return;
     }
 
-    console.log("[Main.js] Default level data pre-loaded successfully.");
+    Logger.info("[Main.js] Default level data pre-loaded successfully.");
     proceedToGameStartConditionCheck(true); // Indicate ALL prerequisites are loaded
 }
 
 // allAssetsProcessed would call this new function
 function allAssetsProcessed(successful, failed, totalInManifest) {
-    console.log(`[Main.js allAssetsProcessed] Manifest (for assets) processing finished. Total: ${totalInManifest}, Successful: ${successful}, Failed: ${failed}`);
+    Logger.info(`[Main.js allAssetsProcessed] Manifest (for assets) processing finished. Total: ${totalInManifest}, Successful: ${successful}, Failed: ${failed}`);
     if (failed === 0) {
         loadPrerequisitesAndEnableStart(); // Call the new function
     } else {
@@ -143,7 +152,7 @@ function allAssetsProcessed(successful, failed, totalInManifest) {
 // startGame() is now simpler because the initial level data is already loaded
 async function startGame() { // Still async due to other potential awaits, or just good practice
     showGameControlsOverlay();
-    console.log("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
+    Logger.info("%c[Main.js] startGame() CALLED by button click!", "color: green; font-weight:bold;");
 
     hideWelcomeScreen();
     if (uiElements.gameLoadError) {
@@ -156,7 +165,7 @@ async function startGame() { // Still async due to other potential awaits, or ju
 
     if (!initialLevelData) {
         // This should ideally not happen if proceedToGameStartConditionCheck only enabled the button on success
-        console.error("CRITICAL: Initial level data is missing in startGame, even though it should have been preloaded.");
+        Logger.error("CRITICAL: Initial level data is missing in startGame, even though it should have been preloaded.");
         displayAssetLoadError("Error: Could not retrieve preloaded level data.");
         return;
     }
@@ -165,7 +174,6 @@ async function startGame() { // Still async due to other potential awaits, or ju
     //all entities are spawned here//////////////
     setupSceneFromLevelData(initialLevelData);///
     /////////////////////////////////////////////
-
 
 
     // --- Game Loop and State Initialization (as before) ---
@@ -178,27 +186,26 @@ async function startGame() { // Still async due to other potential awaits, or ju
         animationFrameId = requestAnimationFrame(gameLoop);
         gameState.setGameStopped(false);
     } else {
-        console.log("Game might be already running...");
+        Logger.info("Game might be already running...");
     }
-    console.log(`[Main.js startGame] Game initialized with preloaded level. Starting game loop.`);
+    Logger.info(`[Main.js startGame] Game initialized with preloaded level. Starting game loop.`);
     //last step, follow player with camera
-    console.log(`Calling FOLLOW from main.js: player.x: ${player.x}, player.y: ${player.y}`);
+    Logger.info(`Calling FOLLOW from main.js: player.x: ${player.x}, player.y: ${player.y}`);
 
 }
 
-
 // THIS IS THE RECOMMENDED VERSION
 function proceedToGameStartConditionCheck() {
-    console.log("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,)
+    Logger.info("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,)
     // Ensure uiElements are populated before using them
     if (!uiElements || !uiElements.loadingMessage || !uiElements.startGameButton || !uiElements.gameLoadError) {
-        console.error("[proceedToGameStartConditionCheck] Critical UI elements are missing. Cannot update UI state.");
+        Logger.error("[proceedToGameStartConditionCheck] Critical UI elements are missing. Cannot update UI state.");
         // Potentially display a fatal error to the user on the page itself if possible
         // document.body.innerHTML = "A critical UI error occurred. Please refresh.";
         return;
     }
 
-    console.log("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,
+    Logger.info("[proceedToGameStartConditionCheck] Called. Counts - ToLoad:", assetsToLoadCount,
         "Successful:", assetsSuccessfullyLoadedCount, "Failed:", assetsFailedToLoadCount);
 
 
@@ -208,13 +215,13 @@ function proceedToGameStartConditionCheck() {
 
     if (assetsFailedToLoadCount > 0) {
         const errorMessage = `Failed to load ${assetsFailedToLoadCount} essential game file(s). Please refresh.`;
-        console.log(`CRITICAL: ${errorMessage}`);
+        Logger.error(`CRITICAL: ${errorMessage}`);
         displayAssetLoadError(errorMessage); // Ensure this function correctly shows the error
         uiElements.startGameButton.disabled = true;
         uiElements.startGameButton.textContent = "Error Loading Assets";
     } else if (assetsSuccessfullyLoadedCount === assetsToLoadCount) {
         // This is the ideal success case
-        console.log("All essential assets loaded successfully! Ready for user to start.");
+        Logger.info("All essential assets loaded successfully! Ready for user to start.");
         if (uiElements.gameLoadError) {
             uiElements.gameLoadError.style.display = 'none';
         }
@@ -222,7 +229,7 @@ function proceedToGameStartConditionCheck() {
         // Or, ensure it correctly shows the part with the start button.
         uiElements.startGameButton.disabled = false;
         uiElements.startGameButton.textContent = "Start Game";
-        console.log("Start button should now be enabled.");
+        Logger.info("Start button should now be enabled.");
     } else {
         // This 'else' block handles cases where:
         // 1. assetsToLoadCount was 0 initially (e.g., empty manifest).
@@ -232,14 +239,14 @@ function proceedToGameStartConditionCheck() {
         //    or wasn't accounted for, without throwing an error that incremented failedCount.
 
         if (assetsToLoadCount === 0) {
-            console.log("[proceedToGameStartConditionCheck] No assets were manifested to load. Enabling start.");
+            Logger.info("[proceedToGameStartConditionCheck] No assets were manifested to load. Enabling start.");
             uiElements.startGameButton.disabled = false;
             uiElements.startGameButton.textContent = "Start Game";
         } else {
             // This is the more problematic 'other' case: some assets didn't load successfully,
             // but no errors were explicitly caught and counted by assetsFailedToLoadCount.
             const message = `Assets did not load as expected. Expected: ${assetsToLoadCount}, Loaded: ${assetsSuccessfullyLoadedCount}, Failed: ${assetsFailedToLoadCount}. Please refresh.`;
-            console.warn(`[proceedToGameStartConditionCheck] Unexpected asset loading state: ${message}`);
+            Logger.warn(`[proceedToGameStartConditionCheck] Unexpected asset loading state: ${message}`);
             displayAssetLoadError(message); // Show a generic error
             uiElements.startGameButton.disabled = true;
             uiElements.startGameButton.textContent = "Load Issue";
@@ -252,7 +259,7 @@ function proceedToGameStartConditionCheck() {
 // Ensure these are defined in a scope accessible by this function and startGame/gameLoop
 
 function setupSceneFromLevelData(levelData) {
-    console.log("[Main.js] Setting up scene from level data:", levelData);
+    Logger.info("[Main.js] Setting up scene from level data:", levelData);
     // 1. Clear previous level elements (VERY IMPORTANT for level transitions)
     activeGameElements = []; // Reset the array
     // If you have other specific cleanup (e.g., removing tilemap visuals), do it here.
@@ -266,7 +273,7 @@ function setupSceneFromLevelData(levelData) {
          activeGameElements.push(player);
         window.camera.follow(player);
     } else {
-        console.error("No playerStart defined in level data!");
+        Logger.error("No playerStart defined in level data!");
     }
 
     // 3. Setup Enemies
@@ -292,12 +299,12 @@ function setupSceneFromLevelData(levelData) {
     // 4. Setup Tilemap (if you have one)
     if (levelData.tilemap) {
         tilemapRenderer = new TilemapRenderer(levelData.tilemap, TILE_CONFIG);
-        console.log("[Main.js] TilemapRenderer created.");
+        Logger.info("[Main.js] TilemapRenderer created.");
         // UPDATE CAMERA'S WORLD SIZE
         if (window.camera && tilemapRenderer) {
             const mapW = tilemapRenderer.getMapWidth();
             const mapH = tilemapRenderer.getMapHeight();
-            console.log(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
+            Logger.info(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
             window.camera.setWorldSize(mapW, mapH);
         }
     } else {
@@ -307,12 +314,11 @@ function setupSceneFromLevelData(levelData) {
            // window.camera.setWorldSize(10000, 10000); //
 //            const mapW = tilemapRenderer.getMapWidth();
 //            const mapH = tilemapRenderer.getMapHeight();
-//            console.log(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
+//            Logger.info(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
 //            window.camera.setWorldSize(mapW, mapH);
-
+                //todo decide what happens if no tilemap is in the level data
         }
     }
-
 
     // SET CAMERA TARGET
     if (window.camera && player) { // Assuming 'player' is your player instance
@@ -330,7 +336,7 @@ function setupSceneFromLevelData(levelData) {
 
     // 5. Setup Collectibles, etc.
 
-    console.log("[Main.js] Scene setup complete for level:", levelData.levelName || levelManager.getCurrentLevelInfo()?.id);
+    Logger.info("[Main.js] Scene setup complete for level:", levelData.levelName || levelManager.getCurrentLevelInfo()?.id);
 
     // Any other initializations specific to a new level starting
     input.initInput(); // If input needs re-init per level or only once
@@ -345,17 +351,16 @@ function displayAssetLoadError(message) {
         uiElements.gameLoadError.textContent = message;
         uiElements.gameLoadError.style.display = 'block';
     } else {
-        console.error("gameLoadError UI element not found. Fallback alert:", message);
+        Logger.error("gameLoadError UI element not found. Fallback alert:", message);
         alert("Error loading game: " + message); // Fallback
     }
 }
 
-
 function assetLoaded(err, key) { // A general callback for each loaded asset
     if (err) {
-        console.error(`Error loading asset ${key}:`, err.message);
+        Logger.error(`Error loading asset ${key}:`, err.message);
     } else {
-        console.log(`Asset ${key} successfully processed in main.`);
+        Logger.info(`Asset ${key} successfully processed in main.`);
     }
     assetsLoaded++;
     if (assetsLoaded === assetsToLoad) {
@@ -373,16 +378,14 @@ let uiElements = {
 };
 
 
-
-
 //This function runs after all assets in the manifest have been attempted. It decides if the game can proceed.
 //runs after every asset has been loaded, can the game start?
 
 
 function handleGameResumeAfterSystemPause() {
     const timeNow = performance.now();
-    console.log("Game resuming after system interruption (e.g., tab became visible).");
-   let lastTime = performance.now(); console.log("[gameLoop RESUME] lastTime reset to:", lastTime);
+    Logger.info("Game resuming after system interruption (e.g., tab became visible).");
+   let lastTime = performance.now(); Logger.info("[gameLoop RESUME] lastTime reset to:", lastTime);
 
     lastTimestamp = timeNow;
     gameTimeAccumulator = 0;
@@ -398,12 +401,12 @@ document.addEventListener("visibilitychange", () => {
 
     if (document.hidden) {
         if (!gameState.gamePaused) {
-            console.log("Page hidden, auto-pausing game logic.");
+            Logger.info("Page hidden, auto-pausing game logic.");
             setPauseState(true);
-            console.log("Game auto-paused due to page visibility change.");
+            Logger.info("Game auto-paused due to page visibility change.");
         }
     } else {
-        console.log("Page became visible.");
+        Logger.info("Page became visible.");
         handleGameResumeAfterSystemPause();
     }
 });
@@ -414,11 +417,11 @@ function setPauseState(pause) {
 
     if (pause) {
 
-        if (gameStateLogs) console.log("Game paused by gameState.JS.");
+        if (gameStateLogs) Logger.info("Game paused by gameState.JS.");
     } else {
         const timeNow = performance.now();
         const durationOfPause = timeWhenPauseActuallyStarted > 0 ? (timeNow - timeWhenPauseActuallyStarted) / 1000 : 0;
-        if (gameStateLogs) console.log(`Game unpaused. Was paused for approx ${durationOfPause.toFixed(2)} seconds.`);
+        if (gameStateLogs) Logger.info(`Game unpaused. Was paused for approx ${durationOfPause.toFixed(2)} seconds.`);
 
         lastTimestamp = timeNow;
         gameTimeAccumulator = 0;
@@ -426,8 +429,6 @@ function setPauseState(pause) {
         timeWhenPauseActuallyStarted = 0;
     }
 }
-
-
 
 const MAX_DELTA_TIME = 0.01666666667; // Approx 60 FPS fixed time step
 
@@ -438,7 +439,7 @@ function gameLoop(currentTimestamp) {
     if (!gameState.gamePaused) {
         // UPDATE GAME LOGIC
         if (window.camera) { // Make sure camera is defined
-            console.log(`cameraUYPDATE main.js called. Target: ${window.camera.target.x}, ${window.camera.target.y}`);
+            Logger.trace(`cameraUYPDATE main.js called. Target: ${window.camera.target.x}, ${window.camera.target.y}`);
             window.camera.update(); // Update camera position based on target
         }
         updateGameElements(MAX_DELTA_TIME, currentTimestamp); // Update player, enemies, etc.
@@ -476,7 +477,6 @@ function gameLoop(currentTimestamp) {
     // uiManager.draw(ctx);
 
 
-
     // --- Visualize Canvas Boundary (which is also the Camera Viewport in this case) ---
     ctx.strokeStyle = 'lime'; // A bright color for visibility
     ctx.lineWidth = 2;
@@ -486,21 +486,6 @@ function gameLoop(currentTimestamp) {
 
     animationFrameId = requestAnimationFrame(gameLoop);
 }
-
-function gameLogic() {
-    spawnCounter++;
-    if (spawnCounter >= SPAWN_INTERVAL_FRAMES) { // Assuming SPAWN_INTERVAL_FRAMES is in globals
-        spawnTestRectangle();
-        spawnCounter = 0;
-    }
-    // console.log(`Current score: ${score}`);
-}
-
-
-
-
-
-
 
 
 // You'll also need initializeGame and gameLoop from your existing code
@@ -515,7 +500,7 @@ function initializeGame(player) { // Modified to accept player
     }
     // Add other initial game elements like enemies if they are created in startGame
     // e.g., if eChef1 is created in startGame: activeGameElements.push(eChef1);
-    console.log("[Main.js] initializeGame done. Active elements:", activeGameElements);
+    Logger.info("[Main.js] initializeGame done. Active elements:", activeGameElements);
 }
 
 function updateGameElements(deltaTime, currentTime) {
@@ -541,10 +526,10 @@ function stopGame() {
     if (animationFrameId) {
         gameState.setGameStopped(true);
         gameState.setGamePaused(false);
-        console.log("Stopping game loop.");
+        Logger.info("Stopping game loop.");
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
-        console.log("Game loop stopped.");
+        Logger.info("Game loop stopped.");
     }
 
     removeInputListeners();//where is this//todo remove input listeners
@@ -562,18 +547,18 @@ function stopGame() {
 function pauseGame() {
     // timeWhenPauseActuallyStarted = performance.now(); // This is now set in setPauseState
     if (!animationFrameId) {
-        console.log("Game is not running, cannot pause.");
+        Logger.info("Game is not running, cannot pause.");
         return;
     }
     if (gameState.gamePaused) {
-        console.log("Game is already paused.");
+        Logger.info("Game is already paused.");
         return;
     }
 
     setPauseState(true); // Centralize pause logic
     // cancelAnimationFrame(animationFrameId); // setPauseState doesn't cancel, gameLoop handles paused state
     // animationFrameId = null; // Don't nullify if gameLoop keeps running for pause screen
-    console.log("Game paused by pauseGame function.");
+    Logger.info("Game paused by pauseGame function.");
 
 
     if (globals.pauseMenuOverlay) { // Assuming pauseMenuOverlay is fetched and assigned to globals
@@ -595,7 +580,7 @@ function hidePauseMenu() {
 
 function resumeButtonFunc() {
     if (gameState.gamePaused) {
-        console.log("Resuming game from pause.");
+        Logger.info("Resuming game from pause.");
         setPauseState(false); // Centralize unpause logic
         // The following lines are now handled by setPauseState(false)
         // const pauseDuration = performance.now() - timeWhenPauseActuallyStarted;
@@ -607,7 +592,7 @@ function resumeButtonFunc() {
     } else {
         // This case seems odd for a resume button. Typically it wouldn't start a new game.
         // If it's a "Start/Resume" button, the logic might be different.
-        console.log("Game not paused, or starting new game (from resumeButtonFunc).");
+        Logger.info("Game not paused, or starting new game (from resumeButtonFunc).");
         initializeGame();
         startGame();
     }
@@ -617,18 +602,18 @@ function resumeButtonFunc() {
 function showWelcomeScreen() {
     if (uiElements.welcomeScreen) {
         uiElements.welcomeScreen.style.display = 'flex'; // Or 'block', match your CSS
-        console.log("Showing welcome screen.");
+        Logger.info("Showing welcome screen.");
     } else {
-        console.warn("Welcome screen UI element not found.");
+        Logger.warn("Welcome screen UI element not found.");
     }
 }
 
 function hideWelcomeScreen() {
     if (uiElements.welcomeScreen) {
         uiElements.welcomeScreen.style.display = 'none';
-        console.log("Hiding welcome screen.");
+        Logger.info("Hiding welcome screen.");
     } else {
-        console.warn("Welcome screen UI element not found.");
+        Logger.warn("Welcome screen UI element not found.");
     }
 }
 
@@ -639,7 +624,7 @@ function handleOrientationChange() {
     // ... (your existing orientation detection logic, no changes needed for globals) ...
     // --- Your Game's Logic for Orientation ---
     if (currentOrientation.includes('landscape')) {
-        console.warn("Device is in Landscape. Game designed for Portrait.");
+        Logger.warn("Device is in Landscape. Game designed for Portrait.");
         if (globals.rotateMessageOverlay) {
             globals.rotateMessageOverlay.innerHTML = "<p>This experience is best in Portrait mode. Please rotate your device.</p>";
             globals.rotateMessageOverlay.style.display = 'flex';
@@ -648,7 +633,7 @@ function handleOrientationChange() {
         //    setPauseState(true);
         // }
     } else if (currentOrientation.includes('portrait')) {
-        console.log("Device is in Portrait. Correct orientation for the game.");
+        Logger.info("Device is in Portrait. Correct orientation for the game.");
         if (globals.rotateMessageOverlay) {
             globals.rotateMessageOverlay.style.display = 'none';
         }
@@ -656,7 +641,7 @@ function handleOrientationChange() {
         //    setPauseState(false);
         // }
     } else {
-        console.log("Orientation is unknown or not strictly portrait/landscape.");
+        Logger.info("Orientation is unknown or not strictly portrait/landscape.");
         if (globals.rotateMessageOverlay) {
             globals.rotateMessageOverlay.style.display = 'none';
         }
@@ -664,7 +649,7 @@ function handleOrientationChange() {
 }
 
 function initOrientationDetection() {
-    console.log("Initializing JavaScript orientation detection...");
+    Logger.info("Initializing JavaScript orientation detection...");
     // ... (your existing orientation init logic, no changes needed for globals) ...
     handleOrientationChange();
 }
@@ -672,9 +657,9 @@ function initOrientationDetection() {
 function showAndroidToast(message) {
     if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
         AndroidBridge.showToast(message);
-        console.log("Called AndroidBridge.showToast('" + message + "')");
+        Logger.info("Called AndroidBridge.showToast('" + message + "')");
     } else {
-        console.log(message); // Fallback to console
+        Logger.info(message); // Fallback to console
     }
 }
 
@@ -682,9 +667,9 @@ function vibrateDevicePattern() {
     if (typeof AndroidBridge !== "undefined" && AndroidBridge !== null) {
         var pattern = "0,200,100,400"; // This could be a global const
         AndroidBridge.vibrateWithPattern(pattern);
-        console.log("Called AndroidBridge.vibrateWithPattern('" + pattern + "')");
+        Logger.info("Called AndroidBridge.vibrateWithPattern('" + pattern + "')");
     } else {
-        console.warn("AndroidBridge is not defined. Vibration functionality skipped.");
+        Logger.warn("AndroidBridge is not defined. Vibration functionality skipped.");
     }
 }
 
@@ -692,17 +677,17 @@ function vibrateDevicePattern() {
 
 function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY, customProps = {}) {
     if (!isSpriteSheetLoaded() || !getSpriteSheetImage()) { // Use getters from assetManager
-        console.warn("Sprite sheet not loaded yet (checked via assetManager). Cannot spawn sprite.");
+        Logger.warn("Sprite sheet not loaded yet (checked via assetManager). Cannot spawn sprite.");
         return;
     }
 
     const animData = globals.ANIMATIONS[animationName];
     if (!animData) {
-        console.warn(`Animation "${animationName}" not found.`);
+        Logger.warn(`Animation "${animationName}" not found.`);
         return;
     }
     if (!animData.frames || animData.frames.length === 0) {
-        console.warn(`Animation "${animationName}" has no frames defined.`);
+        Logger.warn(`Animation "${animationName}" has no frames defined.`);
         return;
     }
 
@@ -731,8 +716,6 @@ function spawnAnimatedSprite(animationName = "default_fall", initialX, initialY,
 
 
 
-
-
 class Scenery extends Sprite {
     constructor(x, y, animationName, spriteScale) {
         super(x, y, animationName, spriteScale); // Assumes Sprite uses globals.ANIMATIONS
@@ -746,7 +729,7 @@ class Scenery extends Sprite {
 let chefKetchup; // This variable's scope and purpose needs review
 
 function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desiredScale = 1.0) {
-    if (globals.debugDraw) console.log(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
+    Logger.info(`Attempting to spawn Chef Ketchup at (${x},${y}) walking towards`, movementDirection, `with scale: ${desiredScale}`);
 
     // !!! 'chef' is used here but not defined in this scope. Needs to be passed or defined. !!!
     // Assuming 'chef' was meant to be the 'chefKetchup' instance being created.
@@ -756,7 +739,7 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
     const animDef = globals.ANIMATIONS[animationToSpawn];
 
     if (!animDef || !animDef.frames || animDef.frames.length === 0) {
-        console.error(`Animation "${animationToSpawn}" has no frames or is undefined! Cannot determine sHeight.`);
+        Logger.error(`Animation "${animationToSpawn}" has no frames or is undefined! Cannot determine sHeight.`);
         return null;
     }
 
@@ -774,16 +757,16 @@ function spawnChefKetchupWalking(x, y, movementDirection = { x: 1, y: 0 }, desir
         const firstFrameDef = animDef.frames[0];
         const sHeight = firstFrameDef.sHeight;
         if (sHeight === undefined) {
-            console.error(`sHeight is undefined for the first frame of animation "${animationToSpawn}".`);
+            Logger.error(`sHeight is undefined for the first frame of animation "${animationToSpawn}".`);
             return chefKetchup; // Return partially initialized chef
         }
         const dHeight = sHeight * chefKetchup.spriteScale;
         const desiredPadding = 10;
         chefKetchup.y = globals.nativeGameHeight - dHeight - desiredPadding; // Use globals.nativeGameHeight
 
-        if (globals.debugDraw) console.log("Chef Ketchup spawned walking!", chefKetchup);
+        Logger.info("Chef Ketchup spawned walking!", chefKetchup);
     } else {
-        console.error("Failed to spawn Chef Ketchup for walking.");
+        Logger.error("Failed to spawn Chef Ketchup for walking.");
     }
     return chefKetchup;
 }
@@ -809,22 +792,22 @@ function spawnPatrollingChef(startY, scale = 1.0, speed = 50) {
     if (chef) {
         const animDef = globals.ANIMATIONS[chef.animationName];
         if (!animDef || !animDef.frames || animDef.frames.length === 0) {
-            console.error(`Animation "${chef.animationName}" has no frames! Cannot adjust Y.`);
+            Logger.error(`Animation "${chef.animationName}" has no frames! Cannot adjust Y.`);
             return chef; // Return partially initialized
         }
         const currentFrameDef = animDef.frames[0];
         const sHeight = currentFrameDef.sHeight;
         if (sHeight === undefined) {
-            console.error(`sHeight is undefined for animation "${chef.animationName}".`);
+            Logger.error(`sHeight is undefined for animation "${chef.animationName}".`);
             return chef; // Return partially initialized
         }
         const dHeight = sHeight * chef.spriteScale;
         const desiredPadding = 10;
         chef.y = globals.nativeGameHeight - dHeight - desiredPadding; // Use globals.nativeGameHeight
 
-        if (globals.debugDraw) console.log(`Patrolling Chef spawned at (${startX},${chef.y}), speed: ${speed}, scale: ${globals.default_scale}`);
+        Logger.info(`Patrolling Chef spawned at (${startX},${chef.y}), speed: ${speed}, scale: ${globals.default_scale}`);
     } else {
-        console.error("Failed to spawn Patrolling Chef.");
+        Logger.error("Failed to spawn Patrolling Chef.");
     }
     return chef;
 }
@@ -843,7 +826,7 @@ function spawnIncompleteChef(startX, initialY) { // Added startX, initialY param
     // This function seems incomplete as it doesn't fully create a sprite object to push
     // For now, it calculates a Y. If it's meant to spawn a full sprite, it needs more.
     let calculatedY = globals.nativeGameHeight - dHeight - initialY;
-    if (globals.debugDraw) console.log(`Calculated Y for incomplete chef: ${calculatedY}`);
+    Logger.info(`Calculated Y for incomplete chef: ${calculatedY}`);
 
     // To actually spawn it, you'd do something like:
     // return spawnAnimatedSprite(tempChef.animationName, startX, calculatedY, { scale: tempChef.spriteScale, entityType: 'player_chef' });
@@ -882,10 +865,9 @@ function spawnTestRectangle() {
 const LETTERBOX_COLOR = "#333333"; // This could be in globals.js
 
 
-
 function resizeCanvasAndCalculateScale() {
     if (!canvas) {
-        console.error("Canvas element not found in the DOM.");
+        Logger.error("Canvas element not found in the DOM.");
         return; // Guard against canvas not being ready
     }
 
@@ -903,12 +885,12 @@ function resizeCanvasAndCalculateScale() {
         // e.g., window.camera.updateViewportDependentProperties();
         // Or if its follow logic/deadzone depends on viewport, it might need an update.
         // For simple width/height, just setting them is often enough for TilemapRenderer.
-        console.log(`[Resize] Camera viewport updated to: ${window.camera.width}x${window.camera.height}`);
+        Logger.info(`[Resize] Camera viewport updated to: ${window.camera.width}x${window.camera.height}`);
     } else {
-        console.warn("[Resize] Camera object not found, cannot update its viewport dimensions.");
+        Logger.warn("[Resize] Camera object not found, cannot update its viewport dimensions.");
     }
 
-    if (globals.debugDraw) showAndroidToast(`Canvas attributes set to W=${canvas.width}, H=${canvas.height}`);
+
 
     canvas.style.width = canvas.width + 'px';
     canvas.style.height = canvas.height + 'px';
@@ -917,8 +899,8 @@ function resizeCanvasAndCalculateScale() {
     gameAreaViewBoxHeight = canvas.height;
 
     let screenAspectRatio = canvas.width / canvas.height;
-    if (globals.debugDraw) console.log(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${globals.nativeGameAspectRatio}`);
-    if (globals.debugDraw) showAndroidToast(`aspect ratio: ${screenAspectRatio}`);
+    Logger.info(`PHONE_SCALE_DEBUG: Screen Aspect Ratio=${screenAspectRatio}, Native Aspect Ratio=${globals.nativeGameAspectRatio}`);
+
 
     if (screenAspectRatio > globals.nativeGameAspectRatio) { // Assuming nativeGameAspectRatio is still a direct export
         globals.sceneState.currentScale = canvas.height / globals.nativeGameHeight; // Mutate property of exported object
@@ -929,28 +911,9 @@ function resizeCanvasAndCalculateScale() {
         globals.sceneState.currentOffsetX = 0;
         globals.sceneState.currentOffsetY = (canvas.height - (globals.nativeGameHeight * globals.sceneState.currentScale)) / 2;
     }
-    if (globals.debugDraw) console.log(`nativeGameAspectRatio = ${globals.nativeGameAspectRatio} screen aspect ratio = ${screenAspectRatio}`);
-    if (globals.debugDraw) console.log(`PHONE_SCALE_DEBUG: Final - currentScale=${globals.currentScale}, cOffsetX=${globals.currentOffsetX}, cOffsetY=${globals.currentOffsetY}`);
+    Logger.info(`nativeGameAspectRatio = ${globals.nativeGameAspectRatio} screen aspect ratio = ${screenAspectRatio}`);
+    Logger.info(`PHONE_SCALE_DEBUG: Final - currentScale=${globals.currentScale}, cOffsetX=${globals.currentOffsetX}, cOffsetY=${globals.currentOffsetY}`);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -974,7 +937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         gameAreaViewBoxHeight = canvas.height;
         window.addEventListener('resize', resizeCanvasAndCalculateScale);//only call resizeCanvasAndCalculateScale on this line!
     } else {
-        console.error("CRITICAL: Canvas element 'gameArea' not found in the DOM.");
+        Logger.error("CRITICAL: Canvas element 'gameArea' not found in the DOM.");
         return; // Stop further execution if canvas isn't found
     }
 
@@ -985,17 +948,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const welcomeScreenElement = document.getElementById('welcomeScreen');
     // Step 2: STORE the reference in your uiElements object
     uiElements.welcomeScreen = welcomeScreenElement;
-    console.log("Attempting to get 'welcomeScreen'. Result:", uiElements.welcomeScreen);
+    Logger.info("Attempting to get 'welcomeScreen'. Result:", uiElements.welcomeScreen);
 
 
     uiElements.startGameButton = document.getElementById('startGameButton');
-    console.log("Attempting to get 'startGameButton'. Result:", uiElements.startGameButton);
+    Logger.info("Attempting to get 'startGameButton'. Result:", uiElements.startGameButton);
 
     uiElements.loadingMessage = document.getElementById('loadingMessage');
-    console.log("Attempting to get 'loadingMessage'. Result:", uiElements.loadingMessage);
+    Logger.info("Attempting to get 'loadingMessage'. Result:", uiElements.loadingMessage);
 
     uiElements.gameLoadError = document.getElementById('gameLoadError');
-    console.log("Attempting to get 'gameLoadError'. Result:", uiElements.gameLoadError);
+    Logger.info("Attempting to get 'gameLoadError'. Result:", uiElements.gameLoadError);
 
 
     // Now you can check if they were found and use them:
@@ -1003,23 +966,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         uiElements.startGameButton.disabled = true;
         uiElements.startGameButton.textContent = "Loading...";
         uiElements.startGameButton.addEventListener('click', () => {
-            console.log("Start Game button was clicked by the user!");
+            Logger.info("Start Game button was clicked by the user!");
             startGame();
         });
     } else {
-        console.error("Start Game Button ('startGameButton') was NOT found in the DOM!");
+        Logger.error("Start Game Button ('startGameButton') was NOT found in the DOM!");
     }
 
     if (uiElements.loadingMessage) {
         uiElements.loadingMessage.style.display = 'block';
     } else {
-        console.warn("Loading message UI element ('loadingMessage') not found.");
+        Logger.warn("Loading message UI element ('loadingMessage') not found.");
     }
 
     if (uiElements.welcomeScreen) {
         showWelcomeScreen(); // Call your function that uses uiElements.welcomeScreen
     } else {
-        console.warn("Welcome screen UI element ('welcomeScreen') was not found, so showWelcomeScreen() might not work as expected.");
+        Logger.warn("Welcome screen UI element ('welcomeScreen') was not found, so showWelcomeScreen() might not work as expected.");
     }
 
 
@@ -1060,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (welcomeBackgroundImageContainer) {
         globals.setWelcomeBackgroundImageContainer(welcomeBackgroundImageContainer);
     } else {
-        console.warn("DOM element 'welcomeBackgroundImageContainer' not found for globals init.");
+        Logger.warn("DOM element 'welcomeBackgroundImageContainer' not found for globals init.");
     }
 
     // For controlsOverlay
@@ -1069,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (controlsOverlay) {
         globals.setControlsOverlay(controlsOverlay);
     } else {
-        console.warn("DOM element 'gameControlsOverlay' not found for globals init.");
+        Logger.warn("DOM element 'gameControlsOverlay' not found for globals init.");
     }
 
     // For pauseButton
@@ -1078,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pauseButton) {
         globals.setPauseButton(pauseButton);
     } else {
-        console.warn("DOM element 'pauseButton' not found for globals init.");
+        Logger.warn("DOM element 'pauseButton' not found for globals init.");
     }
 
     // For welcomeScreen
@@ -1087,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (welcomeScreen) {
         globals.setWelcomeScreen(welcomeScreen);
     } else {
-        console.warn("DOM element 'welcomeScreenOverlay' not found for globals init.");
+        Logger.warn("DOM element 'welcomeScreenOverlay' not found for globals init.");
     }
 
     // For pauseMenuOverlay
@@ -1096,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pauseMenuOverlay) {
         globals.setPauseMenuOverlay(pauseMenuOverlay);
     } else {
-        console.warn("DOM element 'pauseMenuOverlay' not found for globals init.");
+        Logger.warn("DOM element 'pauseMenuOverlay' not found for globals init.");
     }
 
     // For resumeButton
@@ -1105,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (resumeButton) {
         globals.setResumeButton(resumeButton);
     } else {
-        console.warn("DOM element 'resumeButton' not found for globals init.");
+        Logger.warn("DOM element 'resumeButton' not found for globals init.");
     }
 
     // For startButton
@@ -1114,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (startButton) {
         globals.setStartButton(startButton);
     } else {
-        console.warn("DOM element 'startGameButton' not found for globals init.");
+        Logger.warn("DOM element 'startGameButton' not found for globals init.");
     }
 
     // For quitToMenuButton
@@ -1123,34 +1086,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (quitToMenuButton) {
         globals.setQuitToMenuButton(quitToMenuButton);
     } else {
-        console.warn("DOM element 'quitToMenuButton' not found for globals init.");
+        Logger.warn("DOM element 'quitToMenuButton' not found for globals init.");
     }
 
     // For settingsOverlay
-    // Assuming globals.js: export let settingsOverlay = null;
+
     // and: export function setSettingsOverlay(el) { settingsOverlay = el; }
     if (settingsOverlay) {
         globals.setSettingsOverlay(settingsOverlay);
     } else {
-        console.warn("DOM element 'settingsOverlay' not found for globals init.");
+        Logger.warn("DOM element 'settingsOverlay' not found for globals init.");
     }
 
     // For rotateMessageOverlay
-    // Assuming globals.js: export let rotateMessageOverlay = null;
-    // and: export function setRotateMessageOverlay(el) { rotateMessageOverlay = el; }
+
     if (rotateMessageOverlay) {
         globals.setRotateMessageOverlay(rotateMessageOverlay);
     } else {
-        console.warn("DOM element 'rotateMessageOverlay' not found for globals init.");
+        Logger.warn("DOM element 'rotateMessageOverlay' not found for globals init.");
     }
 
     if (startButton) {
 
         startButton.addEventListener('click', () => {
             if (animationFrameId) {
-                console.log("Game is already running, cannot start again.");
+                Logger.info("Game is already running, cannot start again.");
             } else {
-                console.log("Starting new game from Start Button.");
+                Logger.info("Starting new game from Start Button.");
                 if (welcomeScreen) welcomeScreen.style.display = 'none'; // Assuming welcomeScreen is the overall welcome overlay
                 if (welcomeBackgroundImageContainer) welcomeBackgroundImageContainer.style.display = 'none';
                 showGameControlsOverlay();
@@ -1163,7 +1125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pauseButton) {
         pauseButton.addEventListener('click', () => {
             if (animationFrameId && !gameState.gamePaused) {
-                console.log("Pause button clicked, pausing game.");
+                Logger.info("Pause button clicked, pausing game.");
                 pauseGame();
             }
         });
@@ -1178,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (quitToMenuButton) {
         quitToMenuButton.addEventListener('click', () => {
             if (gameState.gamePaused) { // Typically quit from a paused state
-                console.log("Quit to menu button clicked, stopping game.");
+                Logger.info("Quit to menu button clicked, stopping game.");
                 stopGame();
                 hideGameControlsOverlay();
                 hidePauseMenu();
@@ -1194,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadSettings();
         populateSettingsUI();
         if (settingsOverlay) settingsOverlay.classList.add('visible');
-        console.log("Settings button clicked, showing settings overlay.");
+        Logger.info("Settings button clicked, showing settings overlay.");
     }
 
     if (settingsButtonGame && settingsOverlay) { // Assuming settingsButton is the in-game one
@@ -1215,13 +1177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     addListenersForSettingsUI();
     initOrientationDetection();
-    // resizeCanvasAndCalculateScale(); // Already called after canvas init
 
-
-    //SETUP ASSET LOADING
-
-
-////////////////i think this is what i need to change
 
     // In main.js
     const assetsManifest = [
@@ -1234,10 +1190,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add other assets here if needed, e.g.:
         // { key: 'anotherImage', type: 'image', path: 'images/other.png' }
     ];
-    console.log("[Main.js DOMContentLoaded] Constructed assetsManifest:", JSON.stringify(assetsManifest, null, 2));
+    Logger.info("[Main.js DOMContentLoaded] Constructed assetsManifest:", JSON.stringify(assetsManifest, null, 2));
 
     if (!assetsManifest || assetsManifest.length === 0) {
-        console.warn("Asset manifest is empty or undefined. Proceeding as if all assets are loaded.");
+        Logger.warn("Asset manifest is empty or undefined. Proceeding as if all assets are loaded.");
         assetsToLoadCount = 0; // Ensure counters are zero
         assetsSuccessfullyLoadedCount = 0;
         assetsFailedToLoadCount = 0;
@@ -1245,77 +1201,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return; // Skip asset loading loop
     }
 
- //   assetsToLoadCount = assetsManifest.length;
-  //  assetsSuccessfullyLoadedCount = 0; // These are presumably used in singleAssetProcessed/proceedToGameStart
-  //  assetsFailedToLoadCount = 0;
 
-/*    if (assetsToLoadCount > 0) {
-        assetsManifest.forEach(asset => {
-            // Initial log showing what asset we're about to process
-            console.log(`[Main.js] Processing asset manifest entry. Key: "${asset.key}", Type: "${asset.type || 'N/A'}"`);
-
-            // Basic check: Ensure every asset has a key
-            if (!asset.key) {
-                const errorMsg = `Asset in manifest is missing a "key". Entry: ${JSON.stringify(asset)}`;
-                console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
-                // Call singleAssetProcessed with a placeholder or decide how to handle keyless entries
-                singleAssetProcessed("unknown_asset_key_error", new Error(errorMsg), null);
-                return; // Skip this iteration
-            }
-
-            // --- Type-specific loading logic ---
-            if (asset.type === 'masterSpriteSheet') {
-                // Check for required paths for this type
-                if (!asset.jsonPath || !asset.imagePath) {
-                    const errorMsg = `Asset (masterSpriteSheet) "${asset.key}" is missing required jsonPath or imagePath. jsonPath: "${asset.jsonPath}", imagePath: "${asset.imagePath}"`;
-                    console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
-                    singleAssetProcessed(asset.key, new Error(errorMsg), null);
-                } else {
-                    console.log(`[Main.js] Requesting MASTER SPRITE SHEET load for: Key="${asset.key}", JSON="${asset.jsonPath}", Image="${asset.imagePath}"`);
-                    assetManager.loadMasterSpriteSheet(
-                        asset.jsonPath,
-                        asset.imagePath,
-                        singleAssetProcessed, // Your callback
-                        asset.key             // The key for this asset
-                    );
-                }
-            } else if (asset.type === 'image') { // For simple, individual images
-                // Check for required path for this type
-                if (!asset.path) {
-                    const errorMsg = `Asset (image) "${asset.key}" is missing required "path". Path: "${asset.path}"`;
-                    console.error(`%c${errorMsg}`, 'color:red; font-weight:bold;');
-                    singleAssetProcessed(asset.key, new Error(errorMsg), null);
-                } else {
-                    console.log(`[Main.js] Requesting IMAGE load for: Key="${asset.key}", Path="${asset.path}"`);
-                    assetManager.loadImage(
-                        asset.key,
-                        asset.path,
-                        singleAssetProcessed
-                    );
-                }
-            } else {
-                // Handle unknown or missing asset types
-                const errorMsg = `Asset "${asset.key}" has an unknown or unspecified "type" in manifest. Manifest entry: ${JSON.stringify(asset)}`;
-                console.error(`%c${errorMsg}`, 'color:orange; font-weight:bold;');
-                singleAssetProcessed(asset.key, new Error(errorMsg), null);
-            }
-        });
-    } else {
-        console.log("[Main.js DOMContentLoaded] No assets to load from manifest. Proceeding.");
-        // This function presumably enables the start button or starts the game if counts match
-        proceedToGameStartConditionCheck();
-    }*/
-    // VVVVVV THIS IS WHAT SHOULD BE ACTIVE VVVVVV
     if (!assetsManifest || assetsManifest.length === 0) {
-        console.warn("Asset manifest is empty. Proceeding as if all assets are loaded.");
+        Logger.warn("Asset manifest is empty. Proceeding as if all assets are loaded.");
         assetsToLoadCount = 0;
         assetsSuccessfullyLoadedCount = 0;
         assetsFailedToLoadCount = 0;
         proceedToGameStartConditionCheck(); // Correctly handles empty manifest
     } else {
-        console.log("[DOMContentLoaded] Calling await processManifest...");
+        Logger.info("[DOMContentLoaded] Calling await processManifest...");
         await processManifest(assetsManifest, singleAssetProcessed, allAssetsProcessed);
-        console.log("[DOMContentLoaded] await processManifest FINISHED."); // Add this log
+        Logger.info("[DOMContentLoaded] await processManifest FINISHED."); // Add this log
     }
 
 
@@ -1323,17 +1219,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-// --- Counters for asset loading (used by callbacks) ---
-
-
-
-
-
-
-// --- Your processManifest function (Looks good!) ---
-// In main.js
 export async function processManifest(manifest, progressCallback, completionCallback) {
-    console.log(`%c[processManifest START] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
+    Logger.info(`%c[processManifest START] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
     let loadedCount = 0;
     let failedCount = 0; // These are local to processManifest, used for its own summary
     const totalAssets = manifest.length;
@@ -1342,11 +1229,11 @@ export async function processManifest(manifest, progressCallback, completionCall
     assetsToLoadCount = totalAssets;
     assetsSuccessfullyLoadedCount = 0;
     assetsFailedToLoadCount = 0;
-    console.log(`[processManifest] Initialized global counters: ToLoad=${assetsToLoadCount}, Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
+    Logger.info(`[processManifest] Initialized global counters: ToLoad=${assetsToLoadCount}, Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
 
     for (const asset of manifest) {
         let currentAssetKey = asset.key || "UNKNOWN_ASSET_KEY"; // Fallback for key
-        console.log(`[processManifest] Processing asset: ${currentAssetKey} (Type: ${asset.type || 'N/A'})`);
+        Logger.info(`[processManifest] Processing asset: ${currentAssetKey} (Type: ${asset.type || 'N/A'})`);
         let loadedAssetData = null;
 
         try {
@@ -1355,42 +1242,42 @@ export async function processManifest(manifest, progressCallback, completionCall
 
             if (asset.type === "masterSpriteSheet") {
                 if (!asset.jsonPath || !asset.imagePath) throw new Error(`Asset (masterSpriteSheet) "${currentAssetKey}" is missing jsonPath or imagePath.`);
-                console.log(`[processManifest] Attempting to load masterSpriteSheet: "${currentAssetKey}"`);
+                Logger.info(`[processManifest] Attempting to load masterSpriteSheet: "${currentAssetKey}"`);
                 await assetManager.loadMasterSpriteSheet(asset.jsonPath, asset.imagePath, currentAssetKey);
                 loadedAssetData = assetManager.getMasterSheetImage();
-                console.log(`[processManifest] Master sprite sheet "${currentAssetKey}" loaded successfully by assetManager.`);
+                Logger.info(`[processManifest] Master sprite sheet "${currentAssetKey}" loaded successfully by assetManager.`);
             } else if (asset.type === "image") {
                 if (!asset.path) throw new Error(`Asset (image) "${currentAssetKey}" is missing "path".`);
-                console.log(`[processManifest] Attempting to load image: "${currentAssetKey}"`);
+                Logger.info(`[processManifest] Attempting to load image: "${currentAssetKey}"`);
                 loadedAssetData = await assetManager.loadImage(currentAssetKey, asset.path);
-                console.log(`[processManifest] Image "${currentAssetKey}" loaded successfully by assetManager.`);
+                Logger.info(`[processManifest] Image "${currentAssetKey}" loaded successfully by assetManager.`);
             } else if (asset.type === "audio") {
-                console.log(`[processManifest] Audio "${currentAssetKey}" processed (stub).`);
+                Logger.info(`[processManifest] Audio "${currentAssetKey}" processed (stub).`);
                 loadedAssetData = `Audio data for ${currentAssetKey}`;
             } else {
-                console.warn(`[processManifest] Unknown asset type: ${asset.type} for key: ${currentAssetKey}`);
+                Logger.warn(`[processManifest] Unknown asset type: ${asset.type} for key: ${currentAssetKey}`);
                 throw new Error(`Unknown asset type: ${asset.type}`);
             }
 
             // Asset considered successfully processed by processManifest at this point
             loadedCount++; // Increment local success counter for processManifest's own summary
-            console.log(`[processManifest] SUCCESS for asset "${currentAssetKey}". Calling progressCallback with error=null.`);
+            Logger.info(`[processManifest] SUCCESS for asset "${currentAssetKey}". Calling progressCallback with error=null.`);
             if (progressCallback) progressCallback(currentAssetKey, null, loadedAssetData, loadedCount + failedCount, totalAssets);
 
         } catch (error) {
             failedCount++; // Increment local failure counter for processManifest's own summary
-            console.error(`[processManifest] CAUGHT ERROR for asset "${currentAssetKey}":`, error.message, error.stack);
-            console.log(`[processManifest] FAILURE for asset "${currentAssetKey}". Calling progressCallback with error object.`);
+            Logger.error(`[processManifest] CAUGHT ERROR for asset "${currentAssetKey}":`, error.message, error.stack);
+            Logger.info(`[processManifest] FAILURE for asset "${currentAssetKey}". Calling progressCallback with error object.`);
             if (progressCallback) progressCallback(currentAssetKey, error, null, loadedCount + failedCount, totalAssets);
         }
         // Log status after each asset attempt using local counts
-        console.log(`[processManifest] After asset "${currentAssetKey}": Local Counts - Loaded: ${loadedCount}, Failed: ${failedCount} of ${totalAssets}`);
+        Logger.info(`[processManifest] After asset "${currentAssetKey}": Local Counts - Loaded: ${loadedCount}, Failed: ${failedCount} of ${totalAssets}`);
     }
 
-    console.log(`[processManifest] Manifest loop COMPLETE. Local Counts - Expected: ${totalAssets}, Loaded: ${loadedCount}, Failed: ${failedCount}`);
-    console.log(`[processManifest] Calling completionCallback. Global Counts before call: Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
+    Logger.info(`[processManifest] Manifest loop COMPLETE. Local Counts - Expected: ${totalAssets}, Loaded: ${loadedCount}, Failed: ${failedCount}`);
+    Logger.info(`[processManifest] Calling completionCallback. Global Counts before call: Success=${assetsSuccessfullyLoadedCount}, Failed=${assetsFailedToLoadCount}`);
     if (completionCallback) completionCallback(loadedCount, failedCount, totalAssets); // Use local counts for the summary passed to allAssetsProcessed
-    console.log(`%c[processManifest END] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
+    Logger.info(`%c[processManifest END] - ${new Date().toISOString()}`, "color: green; font-weight: bold;");
 }
 
 
