@@ -39,19 +39,21 @@ export class Player extends Character {
             // Reset or deactivate
         }
 
+
+        /////todo im using camera now,,, and a full game world, i don't need to check boundaries
         // Boundary checks
-        const playerWidth = this.width; // Width is now set by Sprite based on current frame
-        const playerHeight = this.height; // Height is now set by Sprite
-
-        const minX = 0;
-        const maxX = globals.nativeGameWidth - playerWidth;
-        const minY = 0;
-        const maxY = globals.nativeGameHeight - playerHeight;
-
-        if (this.x < minX) this.x = minX;
-        if (this.x > maxX) this.x = maxX;
-        if (this.y < minY) this.y = minY;
-        if (this.y > maxY) this.y = maxY;
+//        const playerWidth = this.width; // Width is now set by Sprite based on current frame
+//        const playerHeight = this.height; // Height is now set by Sprite
+//
+//        const minX = 0;
+//        const maxX = globals.nativeGameWidth - playerWidth;
+//        const minY = 0;
+//        const maxY = globals.nativeGameHeight - playerHeight;
+//
+//        if (this.x < minX) this.x = minX;
+//        if (this.x > maxX) this.x = maxX;
+//        if (this.y < minY) this.y = minY;
+//        if (this.y > maxY) this.y = maxY;
         // --- End of Movement ---
 
         // --- Animation State Logic ---

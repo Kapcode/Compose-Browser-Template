@@ -21,7 +21,8 @@ export class Camera {
 
     follow(target) {
         this.target = target;
-        console.log("[Camera] Now following target:", target);
+        console.log("%c CAMERA FOLLOW CALLED! Target:", "background:yellow; color:black;", window.camera.target);
+        console.log("[Camera] Now following target:", this.target);
     }
 
     setWorldSize(worldWidth, worldHeight) {
@@ -34,6 +35,12 @@ export class Camera {
     }
 
     update() {
+        console.log(`update(IN UPDATE) called. Target: ${this.target ? this.target.name : 'None'}`);
+        // Log 'this' itself to see what object 'this' refers to
+        console.log("[Camera UPDATE method] 'this' refers to:", this);
+        // Log this.target directly
+        console.log(`[Camera UPDATE method] (Line 37-ish) this.target is:`, this.target); // Your existing log, ensure it's using 'this.target'
+
         if (!this.target) {
             return;
         }
@@ -41,7 +48,7 @@ export class Camera {
         // Calculate the ideal camera position to center the target
         let idealX = this.target.x + (this.target.width / 2) - (this.width / 2);
         let idealY = this.target.y + (this.target.height / 2) - (this.height / 2);
-
+        console.log(`[Camera UPDATE method] Ideal position: x: ${idealX}, y: ${idealY}`);
         // --- Simpler follow logic (without dead zone or damping) ---
         // this.x = idealX;
         // this.y = idealY;

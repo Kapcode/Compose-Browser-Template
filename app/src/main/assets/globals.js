@@ -83,7 +83,8 @@ export const ANIMATIONS = {
         spriteSheetKey: MASTER_SPRITE_SHEET_KEY,
         loop: true,
         defaultAnimationSpeedFPS: 12,
-        baseMovementSpeed: 0, // Movement speed might be handled by Player class itself
+        baseMovementSpeed: 0,
+        baseSpeedModifier:1.8,// Movement speed might be handled by Player class itself
         frames: [
             "walk-pickle-1.png", // Example sprite name
             "walk-pickle-4.png",

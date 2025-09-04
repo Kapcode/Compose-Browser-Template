@@ -1,5 +1,6 @@
 import { initInput, isActionActive } from './input.js';
 import { Player } from './Player.js';
+import{ setPlayer } from './main.js';
 import * as globals from './globals.js';
 // In main.js or wherever your Pickle update logic resides
 // import { isActionActive } from './input.js'; // Ensure it's imported in this file too
@@ -9,21 +10,19 @@ class PicklePlayer extends Player {
         this.entityType = "player_pickle";
     }
 }
-export let pPickle1 = null;
-export function createPicklePlayerInstance(x, y, animationName, spriteScale,health,speed) {
-    // Assuming PicklePlayer class is defined in this file or imported
-    //pPickle1 = new PicklePlayer(x, y, animationName, spriteScale,health,speed);
-    pPickle1 = new PicklePlayer(
-        100, // initial x
-        100, // initial y
-        "pickle_player_idle", // <<< Initial animation name
-        1.0, // spriteScale
-        100, // health
-        150  // speed
-    );
-    console.log("[PickleMan.js]  pPickle1 instance created and assigned:", pPickle1);
 
-    return pPickle1; // Optionally return it
+export function createPicklePlayerInstance(x, y, animationName, spriteScale,health,speed) {
+    const pPickle1 = new PicklePlayer(
+        x, // <<< USE PARAMETER
+        y, // <<< USE PARAMETER
+        animationName, // <<< USE PARAMETER
+        spriteScale,   // <<< USE PARAMETER
+        health,        // <<< USE PARAMETER
+        speed          // <<< USE PARAMETER
+    );
+    console.log("[PickleMan.js]  pPickle1 instance created with PARAMS and assigned:", pPickle1);
+    setPlayer(pPickle1); // This updates the global 'player' in main.js
+    return pPickle1;     // Return the instance
 }
 // Remember to call this in your game loop's update phase:
 // In updateGameLogic(deltaTime):

@@ -9,7 +9,7 @@ import { Character } from './Character.js';
 import { handleTilemapCollisions, getTileIdAtTileCoords, TILE_SIZE, TILE_PROPERTIES } from './tileMapManagement.js';
 import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
-import { pPickle1, createPicklePlayerInstance } from './PickleMan.js';
+import {createPicklePlayerInstance } from './PickleMan.js';
 import { eChef1, createPatrolingChef } from './ChefEnemy.js';
 import { Camera } from './Camera.js';
 import * as gameState from './gameState.js'
@@ -29,7 +29,10 @@ console.log("-------------------------------------------");
 //canvas
 const levelManager = new LevelManager();
 let tilemapRenderer = null;
-let player; // Your player instance
+export let player; // Your player instance
+export function setPlayer(newPlayer){
+    player = newPlayer;
+}
 export let canvas = null; // Changed from top-level getElementById
 export let ctx = null;    // Changed from top-level getContext
 // Expose camera globally or pass it around as needed
@@ -39,8 +42,14 @@ function initializeCoreGameSystems() {
     // ...
     // Initialize camera - initially, world size might be unknown or default
     // Canvas width/height might come from your 'liveGameArea' or 'canvas' element
+    //todo change this into data driven gameworld width height/width, by levelManager.js
+    const gameWorldWidth = 10000; // Example: Replace with actual level width
+    const gameWorldHeight = 10000; // Example: Replace with actual level heigh
     const canvas = document.getElementById('gameArea'); // Assuming you have one
-    window.camera = new Camera(0, 0, canvas.width, canvas.height, 0, 0); // Start with 0 world size
+    console.log(`[Main.js PRE-CAMERA] [Camera] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
+    window.camera = new Camera(0, 0, canvas.width, canvas.height,gameWorldWidth, gameWorldHeight); // Start with 0 world size
+    console.log(`[Main.js PRE-CAMERA  [Camera]--post constructor] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
+
     console.log("[Main.js] Camera initialized.");
     // ...
 }
@@ -153,7 +162,11 @@ async function startGame() { // Still async due to other potential awaits, or ju
     }
     // --- End Get PRELOADED Level Data ---
 
-    setupSceneFromLevelData(initialLevelData);
+    //all entities are spawned here//////////////
+    setupSceneFromLevelData(initialLevelData);///
+    /////////////////////////////////////////////
+
+
 
     // --- Game Loop and State Initialization (as before) ---
     gameState.setGamePaused(false);
@@ -168,6 +181,9 @@ async function startGame() { // Still async due to other potential awaits, or ju
         console.log("Game might be already running...");
     }
     console.log(`[Main.js startGame] Game initialized with preloaded level. Starting game loop.`);
+    //last step, follow player with camera
+    console.log(`Calling FOLLOW from main.js: player.x: ${player.x}, player.y: ${player.y}`);
+
 }
 
 
@@ -248,6 +264,7 @@ function setupSceneFromLevelData(levelData) {
         player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, 100, 100);
         // If your player is part of activeGameElements for updates:
          activeGameElements.push(player);
+        window.camera.follow(player);
     } else {
         console.error("No playerStart defined in level data!");
     }
@@ -278,12 +295,21 @@ function setupSceneFromLevelData(levelData) {
         console.log("[Main.js] TilemapRenderer created.");
         // UPDATE CAMERA'S WORLD SIZE
         if (window.camera && tilemapRenderer) {
-            window.camera.setWorldSize(tilemapRenderer.getMapWidth(), tilemapRenderer.getMapHeight());
+            const mapW = tilemapRenderer.getMapWidth();
+            const mapH = tilemapRenderer.getMapHeight();
+            console.log(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
+            window.camera.setWorldSize(mapW, mapH);
         }
     } else {
+        //no tile map in level, so remove tilemapRenderer
         tilemapRenderer = null;
         if (window.camera) {
-            window.camera.setWorldSize(window.camera.width, window.camera.height); // Or some default
+           // window.camera.setWorldSize(10000, 10000); //
+//            const mapW = tilemapRenderer.getMapWidth();
+//            const mapH = tilemapRenderer.getMapHeight();
+//            console.log(`[SetupScene] Tilemap dimensions: ${mapW}x${mapH}. Setting camera world size.`);
+//            window.camera.setWorldSize(mapW, mapH);
+
         }
     }
 
@@ -412,6 +438,7 @@ function gameLoop(currentTimestamp) {
     if (!gameState.gamePaused) {
         // UPDATE GAME LOGIC
         if (window.camera) { // Make sure camera is defined
+            console.log(`cameraUYPDATE main.js called. Target: ${window.camera.target.x}, ${window.camera.target.y}`);
             window.camera.update(); // Update camera position based on target
         }
         updateGameElements(MAX_DELTA_TIME, currentTimestamp); // Update player, enemies, etc.
@@ -426,7 +453,7 @@ function gameLoop(currentTimestamp) {
 
     // Draw tilemap (it uses world coordinates, camera translation handles the rest)
     if (tilemapRenderer) {
-        tilemapRenderer.draw(ctx, window.camera); // Pass camera for culling optimization
+        tilemapRenderer.draw(ctx, window.camera,{ bufferTiles: 2 }); // Pass camera for culling optimization// use the buffer
     }
 
     // Draw player, enemies, collectibles, etc. (they use world coordinates)
@@ -447,6 +474,15 @@ function gameLoop(currentTimestamp) {
 
     // Draw UI elements (score, health, pause menu button - these should NOT scroll)
     // uiManager.draw(ctx);
+
+
+
+    // --- Visualize Canvas Boundary (which is also the Camera Viewport in this case) ---
+    ctx.strokeStyle = 'lime'; // A bright color for visibility
+    ctx.lineWidth = 2;
+    // The canvas coordinates are (0,0) to (canvas.width, canvas.height)
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
 
     animationFrameId = requestAnimationFrame(gameLoop);
 }
@@ -845,49 +881,7 @@ function spawnTestRectangle() {
 
 const LETTERBOX_COLOR = "#333333"; // This could be in globals.js
 
-function drawGameElements(passedCtx) {
-    // --- DRAWING PHASE ---
-    if (passedCtx && canvas) {
-        // === THIS IS WHERE YOUR SNIPPET GOES ===
-        const scaleToUse = globals.sceneState.currentScale;
-        const offsetXToUse = globals.sceneState.currentOffsetX;
-        const offsetYToUse = globals.sceneState.currentOffsetY;
 
-        if (scaleToUse === undefined || offsetXToUse === undefined || offsetYToUse === undefined || isNaN(scaleToUse) || scaleToUse <= 0) {
-            console.error("[GameLoop Draw] Invalid sceneState transform values. Scale:", scaleToUse, "OffsetX:", offsetXToUse, "OffsetY:", offsetYToUse);
-            // Potentially skip drawing for this frame or try to recover
-        } else {
-            passedCtx.fillStyle = globals.LETTERBOX_COLOR || '#000';
-            passedCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-            passedCtx.save();
-            passedCtx.translate(offsetXToUse, offsetYToUse);
-            passedCtx.scale(scaleToUse, scaleToUse); // Corrected typo
-
-            if (globals.debugDraw !== false) {
-                passedCtx.strokeStyle = 'red';
-                passedCtx.lineWidth = 2 / scaleToUse;
-                passedCtx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight);
-            }
-
-            //==============================================todo/..///////////////////////camera tilemap=====================
-            if (tilemapRenderer) {
-                tilemapRenderer.draw(ctx, window.camera); // Pass the camera to the tilemap's draw method
-            }
-            // =====================================///////todo/..///////////////////////camera tilemap
-            activeGameElements.forEach(element => {
-                if (element.isActive && typeof element.draw === 'function') {
-                    element.draw(passedCtx);
-                }
-            });
-            passedCtx.restore();
-            // drawFixedUI(passedCtx); // For UI elements not affected by game scale/offset
-        }
-        // =====================================
-    }
-
-    // drawUI(passedCtx); // If you have separate UI drawing
-}
 
 function resizeCanvasAndCalculateScale() {
     if (!canvas) {
@@ -898,6 +892,22 @@ function resizeCanvasAndCalculateScale() {
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    // 2. Update the Camera's viewport dimensions
+    // Ensure 'window.camera' or your global camera reference is accessible here
+    if (window.camera) { // Check if camera object exists
+        window.camera.width = canvas.width;   // Use the new canvas width
+        window.camera.height = canvas.height; // Use the new canvas height
+
+        // If your camera has a method to re-calculate things based on new viewport, call it
+        // e.g., window.camera.updateViewportDependentProperties();
+        // Or if its follow logic/deadzone depends on viewport, it might need an update.
+        // For simple width/height, just setting them is often enough for TilemapRenderer.
+        console.log(`[Resize] Camera viewport updated to: ${window.camera.width}x${window.camera.height}`);
+    } else {
+        console.warn("[Resize] Camera object not found, cannot update its viewport dimensions.");
+    }
+
     if (globals.debugDraw) showAndroidToast(`Canvas attributes set to W=${canvas.width}, H=${canvas.height}`);
 
     canvas.style.width = canvas.width + 'px';

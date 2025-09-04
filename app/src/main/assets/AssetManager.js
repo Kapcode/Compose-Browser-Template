@@ -145,7 +145,23 @@ export class AssetManager { // It's often good to export the class name itself t
 
             const loadImagePromise = (src) => new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => resolve(img);
+                img.onload = () => {
+                    // --- Your new log goes here ---
+                    console.log(`%c[loadImagePromise] SUCCESS - ONLOAD FIRED! Key: "${assetKey}", Path: "${src}", Natural WxH: ${img.naturalWidth}x${img.naturalHeight}`, "color: green; font-weight: bold;");
+
+                    // If this loadImagePromise is part of a larger AssetManager class
+                    // and you are caching images in `this._loadedImages`, you'd do it here
+                    // BEFORE resolving, if this is the primary place images are cached.
+                    // For example:
+                     if (this && this._loadedImages && assetKey !== "UNKNOWN_KEY") {
+                        this._loadedImages[assetKey] = img;
+                        console.log(`%c[loadImagePromise] Key "${assetKey}" stored in this._loadedImages. Current keys:`, "color: green;", Object.keys(this._loadedImages));
+                    } else {
+                        console.warn(`%c[loadImagePromise] Key: "${assetKey}" - 'this._loadedImages' not available or key is UNKNOWN_KEY. Not caching here directly.`, "color: orange;");
+                     }
+
+                    resolve(img); // Now resolve the promise with the loaded image
+                };
                 img.onerror = (err) => reject(new Error(`Failed to load image: ${src}. Error: ${err.message || err.type || 'Unknown image load error'}`));
                 img.src = src;
             });
@@ -193,7 +209,7 @@ export class AssetManager { // It's often good to export the class name itself t
     // AssetManager.js
     getSpriteSheetImage(key) {
         console.log(`[AssetManager] getSpriteSheetImage attempting to get key: "${key}"`);
-        const img = _loadedImages[key];
+        const img = this._loadedImages[key];
 
         if (!img) {
             console.warn(`[AssetManager] getSpriteSheetImage: Image NOT FOUND in _loadedImages for key "${key}". Returning null.`);
