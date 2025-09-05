@@ -12,7 +12,7 @@ export class TilemapRenderer {
         //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteData());//crash
         //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY));//crash
 
-       console.log(`TM constructor: cols rows tileSize tileData tileConfig`,this.cols,this.rows,this.tileSize,this.tileData,this.tileConfig);//no crash
+       console.log(`TM constructor: cols rows tileSize`,this.cols,this.rows,this.tileSize);//no crash
 
         // THE CRITICAL LINES:
         this.masterSpriteData = assetManager.getSpriteData(globals.MASTER_SPRITE_SHEET_KEY);
@@ -26,7 +26,7 @@ export class TilemapRenderer {
         if (!this.masterSheet || !this.masterSpriteData) {
             Logger.error("TilemapRenderer: Master spritesheet or sprite data not found!");
             // Your new log:
-            Logger.trace(`[TilemapRenderer] Master Sheet:`, this.masterSheet); // This prints null
+           // Logger.trace(`[TilemapRenderer] Master Sheet:`, this.masterSheet); // This prints null
         }
         Logger.trace(`[TilemapRenderer] Initialized for a ${this.cols}x${this.rows} map with tileSize ${this.tileSize}.`);
     }
@@ -49,7 +49,7 @@ export class TilemapRenderer {
         }
 
         const buffer = options.bufferTiles !== undefined ? Math.max(0, options.bufferTiles) : 0; // Ensure buffer is not negative
-        Logger.trace(`TM draw pre-all-calculations: cols rows tileSize tileData tileConfig`,this.cols,this.rows,this.tileSize,this.tileData,this.tileConfig);
+        Logger.trace(`TM draw pre-all-calculations: cols rows tileSize`,this.cols,this.rows,this.tileSize);
 
         // Calculate which part of the map is visible through the camera
         let calculatedStartCol = Math.floor(camera.x / this.tileSize);
@@ -99,25 +99,25 @@ export class TilemapRenderer {
                 const tileTypeInfo = this.tileConfig.MAP[tileId];
 
                 if (tilesProcessedInLoop >= 65 && tilesProcessedInLoop <= 75) { // Log around the suspected cutoff
-                    console.group(`[TM Detailed Log] Tile #${tilesProcessedInLoop} (World R:${row}, C:${col})`);
-                    console.log(`  Raw tileId from tileData: ${tileId}`);
-                    console.log(`  tileTypeInfo from tileConfig.MAP[${tileId}]:`, tileTypeInfo);
+                    console.group(`TAGGG[TM Detailed Log] Tile #${tilesProcessedInLoop} (World R:${row}, C:${col})`);
+                    console.log(`TAGGG  Raw tileId from tileData: ${tileId}`);
+                    console.log(`TAGGG  tileTypeInfo from tileConfig.MAP[${tileId}]:`, tileTypeInfo);
                     if (tileTypeInfo && tileTypeInfo.spriteName) {
-                        console.log(`    tileTypeInfo.spriteName: ${tileTypeInfo.spriteName}`);
+                        console.log(`TAGGG    tileTypeInfo.spriteName: ${tileTypeInfo.spriteName}`);
                         if (this.masterSpriteData && this.masterSpriteData.frames) {
                             const spriteInfoForThisTile = this.masterSpriteData.frames[tileTypeInfo.spriteName];
-                            console.log(`    spriteInfo from masterSpriteData.frames['${tileTypeInfo.spriteName}']:`, spriteInfoForThisTile);
+                            console.log(`TAGGG    spriteInfo from masterSpriteData.frames['${tileTypeInfo.spriteName}']:`, spriteInfoForThisTile);
                             if (!spriteInfoForThisTile) {
-                                console.warn(`      ----> CONDITION 2 (if spriteInfo) will FAIL here!`);
+                                console.warn(`TAGGG      ----> CONDITION 2 (if spriteInfo) will FAIL here!`);
                             }
                         } else {
-                            console.warn('      MasterSpriteData or .frames is missing!');
+                            console.warn('TAGGG      MasterSpriteData or .frames is missing!');
                         }
                     } else {
                         if (!tileTypeInfo) {
-                            console.warn(`      ----> CONDITION 1 (if tileTypeInfo...) will FAIL here because tileTypeInfo is falsy!`);
+                            console.warn(`TAGGG      ----> CONDITION 1 (if tileTypeInfo...) will FAIL here because tileTypeInfo is falsy!`);
                         } else if (!tileTypeInfo.spriteName) {
-                            console.warn(`      ----> CONDITION 1 (if tileTypeInfo.spriteName...) will FAIL here because spriteName is missing/falsy!`);
+                            console.warn(`TAGGG      ----> CONDITION 1 (if tileTypeInfo.spriteName...) will FAIL here because spriteName is missing/falsy!`);
                         }
                     }
                     console.groupEnd();
@@ -127,17 +127,21 @@ export class TilemapRenderer {
                 if (tileTypeInfo && tileTypeInfo.spriteName) {
                     const spriteInfo = this.masterSpriteData.frames[tileTypeInfo.spriteName];
                     if (spriteInfo) {
-                        const screenDrawX = col * this.tileSize - camera.x;
-                        const screenDrawY = row * this.tileSize - camera.y;
-                        let debug = true;
+                        const drawX = col * this.tileSize;
+                        const drawY = row * this.tileSize;
+                        let debug = false;
                         if (debug) {
                             ctx.strokeStyle = 'red';
-                            ctx.strokeRect(screenDrawX, screenDrawY, this.tileSize, this.tileSize);
+                            ctx.strokeRect(drawX, drawY, this.tileSize, this.tileSize);
                         } else {
+                            const sX = spriteInfo.frame.x;
+                            const sY = spriteInfo.frame.y;
+                            const sW = spriteInfo.frame.w;
+                            const sH = spriteInfo.frame.h;
                             ctx.drawImage(
                                 this.masterSheet,
-                                sourceX, sourceY, sourceWidth, sourceHeight,
-                                screenDrawX, screenDrawY, this.tileSize, this.tileSize
+                                sX, sY, sW, sH,
+                                drawX, drawY, this.tileSize, this.tileSize
                             );
                         }
                     }
