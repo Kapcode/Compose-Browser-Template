@@ -51,7 +51,7 @@ export function setPlayer(newPlayer){
 export let canvas = null; // Changed from top-level getElementById
 export let ctx = null;    // Changed from top-level getContext
 // Expose camera globally or pass it around as needed
-window.camera = null; // Or 'let camera = null;' if not needing global window access
+window.camera = null;
 // In your main initialization (e.g., DOMContentLoaded or before first game start)
 function initializeCoreGameSystems() {
     // ...
@@ -62,7 +62,7 @@ function initializeCoreGameSystems() {
     const gameWorldHeight = 10000; // Example: Replace with actual level heigh
     const canvas = document.getElementById('gameArea'); // Assuming you have one
     Logger.info(`[Main.js PRE-CAMERA] [Camera] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
-    window.camera = new Camera(0, 0, canvas.width, canvas.height,gameWorldWidth, gameWorldHeight); // Start with 0 world size
+    window.camera = new Camera(0, 0, globals.nativeGameWidth, globals.nativeGameHeight,gameWorldWidth, gameWorldHeight); // Start with 0 world size
     Logger.info(`[Main.js PRE-CAMERA  [Camera]--post constructor] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
 
     Logger.info("[Main.js] Camera initialized.");
@@ -438,54 +438,99 @@ function gameLoop(currentTimestamp) {
 
     if (!gameState.gamePaused) {
         // UPDATE GAME LOGIC
-        if (window.camera) { // Make sure camera is defined
-            Logger.trace(`cameraUYPDATE main.js called. Target: ${window.camera.target.x}, ${window.camera.target.y}`);
-            window.camera.update(); // Update camera position based on target
+        if (window.camera) {
+            // Logger.trace(`cameraUYPDATE main.js called. Target: ${window.camera.target.x}, ${window.camera.target.y}`);
+            window.camera.update(); // Update camera's logical x, y, width, height based on target
+            // This method should NOT directly call ctx.translate itself.
+            // It just updates the camera object's state.
+            // Logger.debug(`[GameLoop] AFTER camera.update(): camera.x = ${window.camera.x.toFixed(2)}`);
         }
-        updateGameElements(MAX_DELTA_TIME, currentTimestamp); // Update player, enemies, etc.
+        updateGameElements(MAX_DELTA_TIME, currentTimestamp);
     }
 
     // DRAWING
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear entire canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear entire actual canvas
 
+    // 1. Save the clean, untransformed state of the canvas
+    ctx.save();
+
+    // 2. Apply global scaling and offset for letterboxing/pillarboxing
+    // This transforms the canvas so that 0,0 is the top-left of your
+    // "native resolution" game area, and everything is scaled appropriately.
+    ctx.translate(globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
+    ctx.scale(globals.sceneState.currentScale, globals.sceneState.currentScale);
+
+    // --- You are now effectively drawing in your "native game world" coordinate system ---
+    // (0,0) in this system corresponds to the top-left of your scaled native view.
+    // The camera's x,y will be used to offset what part of the world is seen here.
+
+    // 3. Apply camera transformation (specifically, pan/scroll the world)
+    // This translates the already scaled context so that the part of the world
+    // the camera is looking at appears at the (scaled) 0,0 of your native view area.
     if (window.camera) {
-        window.camera.apply(ctx); // Apply camera transformations (translate)
+        // This is the most common way to "apply" a 2D camera:
+        // translate the world in the opposite direction of the camera's position.
+        ctx.translate(-window.camera.x, -window.camera.y);
+        // Logger.debug(`[GameLoop] Applied camera translation: -${window.camera.x.toFixed(2)}, -${window.camera.y.toFixed(2)}`);
     }
 
-    // Draw tilemap (it uses world coordinates, camera translation handles the rest)
-    if (tilemapRenderer) {
-        tilemapRenderer.draw(ctx, window.camera,{ bufferTiles: 2 }); // Pass camera for culling optimization// use the buffer
+    // 4. Draw game world elements.
+    // Their draw methods should use their own WORLD coordinates (e.g., player.x, tile.worldX).
+    // The context transformations (global scale/offset + camera translate) will place them correctly.
+    if (tilemapRenderer && window.camera) {
+        // TilemapRenderer's draw method should use camera.x, camera.y for CULLING
+        // (deciding *which* tiles to draw from its tileData array).
+        // For actually drawing a tile at (mapCol, mapRow), it would calculate its
+        // world position (mapCol * tileSize, mapRow * tileSize) and draw it there.
+        // The ctx.translate(-camera.x, -camera.y) handles the "scrolling".
+        tilemapRenderer.draw(ctx, window.camera, { bufferTiles: 2 });
     }
 
-    // Draw player, enemies, collectibles, etc. (they use world coordinates)
     activeGameElements.forEach(element => {
         if (element && typeof element.draw === 'function') {
-            element.draw(ctx);
+            element.draw(ctx); // element.draw should use its own world x,y
         }
     });
-    // Don't forget the player if it's not in activeGameElements but drawn separately
-    // if (player && typeof player.draw === 'function') {
-    // player.draw(ctx);
+
+    // Logger.debug(`[GameLoop] AFTER drawing game elements. Camera still at: camera.x = ${window.camera.x.toFixed(2)}`);
+
+    // 5. Restore the canvas state. This undoes BOTH the camera translation
+    // AND the global scaling/offset, returning to screen coordinates.
+    ctx.restore();
+
+    // --- Now you are drawing in actual screen coordinates (0,0 is top-left of canvas) ---
+    // (No scaling, no translation from global or camera)
+
+    // 6. Draw screen-space UI (score, buttons, menus, debug info, etc.)
+    // For example:
+    // if (uiManager) {
+    //     uiManager.draw(ctx);
     // }
-
-
-    if (window.camera) {
-        window.camera.end(ctx); // Restore context before drawing UI
-    }
-
-    // Draw UI elements (score, health, pause menu button - these should NOT scroll)
-    // uiManager.draw(ctx);
+    // ctx.fillStyle = 'white';
+    // ctx.fillText('Score: ' + gameScore, 10, 30);
 
 
     // --- Visualize Canvas Boundary (which is also the Camera Viewport in this case) ---
-    ctx.strokeStyle = 'lime'; // A bright color for visibility
+    // This strokeRect should be outside the save/restore if you want to see
+    // the true canvas boundary in screen coordinates.
+    // If you want to see the boundary of your SCALED game area, draw it
+    // INSIDE the save/restore, just before the restore, using native coordinates (0,0 to nativeWidth, nativeHeight).
+    ctx.strokeStyle = 'lime';
     ctx.lineWidth = 2;
-    // The canvas coordinates are (0,0) to (canvas.width, canvas.height)
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height); // Draws around the whole actual canvas
+
+    // To visualize the scaled native game area:
+    // ctx.save();
+    // ctx.translate(globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
+    // ctx.scale(globals.sceneState.currentScale, globals.sceneState.currentScale);
+    // ctx.strokeStyle = 'cyan';
+    // ctx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight); // Or camera.width if it's native
+    // ctx.restore();
 
 
     animationFrameId = requestAnimationFrame(gameLoop);
 }
+
 
 
 // You'll also need initializeGame and gameLoop from your existing code
@@ -877,7 +922,11 @@ function resizeCanvasAndCalculateScale() {
 
     // 2. Update the Camera's viewport dimensions
     // Ensure 'window.camera' or your global camera reference is accessible here
-    if (window.camera) { // Check if camera object exists
+
+
+    //////////commented out to try to fix tile issue////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
+    /*if (window.camera) { // Check if camera object exists
         window.camera.width = canvas.width;   // Use the new canvas width
         window.camera.height = canvas.height; // Use the new canvas height
 
@@ -888,7 +937,7 @@ function resizeCanvasAndCalculateScale() {
         Logger.info(`[Resize] Camera viewport updated to: ${window.camera.width}x${window.camera.height}`);
     } else {
         Logger.warn("[Resize] Camera object not found, cannot update its viewport dimensions.");
-    }
+    }*///////////////////////////////////////////////////////////////////////////////////////////////
 
 
 

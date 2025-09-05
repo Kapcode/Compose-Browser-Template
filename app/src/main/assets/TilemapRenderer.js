@@ -9,12 +9,20 @@ export class TilemapRenderer {
         this.tileSize = this.tileConfig.TILE_SIZE;
         this.rows = this.tileData.length;
         this.cols = this.tileData[0] ? this.tileData[0].length : 0; // Get dimensions
+        //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteData());//crash
+        //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY));//crash
+
+       console.log(`TM constructor: cols rows tileSize tileData tileConfig`,this.cols,this.rows,this.tileSize,this.tileData,this.tileConfig);//no crash
 
         // THE CRITICAL LINES:
         this.masterSpriteData = assetManager.getSpriteData(globals.MASTER_SPRITE_SHEET_KEY);
+
         // Line ~14 or ~15:
         this.spriteData = assetManager.getSpriteData(); // For the JSON data
         this.masterSheet = assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY); // MASTER_SPRITE_SHEET_KEY is likely "master_spritesheet"
+        //Logger.log(`TM: asset manager sprite data in constructor`,this.masterSpriteData,this.masterSheet);
+        //console.log(`TM: asset manager sprite data in constructor`,JSON.stringify(this.tileData),this.masterSheet);//crash
+
         if (!this.masterSheet || !this.masterSpriteData) {
             Logger.error("TilemapRenderer: Master spritesheet or sprite data not found!");
             // Your new log:
@@ -24,6 +32,7 @@ export class TilemapRenderer {
     }
 
     draw(ctx, camera, options = {}) { // Pass the camera object to the draw method
+        Logger.trace(`TilemapRenderer.draw: camera.x=${camera.x}, camera.y=${camera.y}, camera.width=${camera.width}, camera.height=${camera.height}`);
         const bufferl = options.bufferTiles !== undefined ? Math.max(0, options.bufferTiles) : 0;
         Logger.trace("EFFECTIVE BUFFER VALUE:", bufferl);
         if (!this.masterSheet || !this.masterSpriteData || !this.tileData) {
@@ -40,6 +49,7 @@ export class TilemapRenderer {
         }
 
         const buffer = options.bufferTiles !== undefined ? Math.max(0, options.bufferTiles) : 0; // Ensure buffer is not negative
+        Logger.trace(`TM draw pre-all-calculations: cols rows tileSize tileData tileConfig`,this.cols,this.rows,this.tileSize,this.tileData,this.tileConfig);
 
         // Calculate which part of the map is visible through the camera
         let calculatedStartCol = Math.floor(camera.x / this.tileSize);
@@ -55,32 +65,20 @@ export class TilemapRenderer {
         const endRow = calculatedEndRow + buffer; // Or just calculatedEndRow + buffer;
         // --- END OF ADDED LINES ---
 
-        Logger.trace("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
+       // Logger.trace("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
+
+        Logger.trace(`[TM RENDER] (before clamp) startCol=${startCol}, endCol=${endCol}, startRow=${startRow}, endRow=${endRow}, buffer=${buffer}, tileSize=${this.tileSize}, camera.x=${camera.x}, camera.y=${camera.y}, this.cols=${this.cols}, this.rows=${this.rows}`);
 
 
-
-
-        // --- DETAILED LOGS ---
-       // Logger.trace(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
-        //Logger.trace(`%c  Camera Viewport: x=${camX.toFixed(2)}, y=${camY.toFixed(2)}, w=${camWidth}, h=${camHeight}`, "color: blue;");
-        //Logger.trace(`%c  Tile Size: ${tileSize}`, "color: blue;");
-        //Logger.trace(`%c  Calculated Tile Indices: startCol=${startCol}, endCol=${endCol}, startRow=${startRow}, endRow=${endRow}`, "color: green; font-weight: bold;");
-
-        // Calculate which part of the map is visible through the camera
         let viewStartCol = Math.floor(camera.x / this.tileSize);
         let viewEndCol = Math.ceil((camera.x + camera.width) / this.tileSize);
         let viewStartRow = Math.floor(camera.y / this.tileSize);
         let viewEndRow = Math.ceil((camera.y + camera.height) / this.tileSize);
-        Logger.trace(`[TM VIEW] View Tile Range: C(${viewStartCol}-${viewEndCol}), R(${viewStartRow}-${viewEndRow})`);
-
 
         const bufferedStartCol = viewStartCol - buffer;
         const bufferedEndCol = viewEndCol + buffer;
         const bufferedStartRow = viewStartRow - buffer;
         const bufferedEndRow = viewEndRow + buffer;
-
-
-
 
         //should be
         // Clamp to map boundaries
@@ -88,53 +86,66 @@ export class TilemapRenderer {
         const clampedEndCol = Math.min(this.cols - 1, bufferedEndCol); // Uses bufferedEndCol
         const clampedStartRow = Math.max(0, bufferedStartRow);         // Uses bufferedStartRow
         const clampedEndRow = Math.min(this.rows - 1, bufferedEndRow); // Uses bufferedEndRow
-        Logger.trace(`[TM BUFFERED] Buffered Tile Range (pre-clamp): C(${bufferedStartCol}-${bufferedEndCol}), R(${bufferedStartRow}-${bufferedEndRow})`);
 
-        Logger.trace("[TM RENDER] Map Dims for Clamping: cols=", this.cols, "rows=", this.rows);
-        // Clamp to map boundaries
-        Logger.trace(`[TM CLAMPED] Final Loop Tile Range: C(${clampedStartCol}-${clampedEndCol}), R(${clampedStartRow}-${clampedEndRow})`);
+        Logger.trace(`[TM CLAMPED] Clamped Tile Range: C(${clampedStartCol}-${clampedEndCol}), R(${clampedStartRow}-${clampedEndRow})`);////////////
+        Logger.trace(`[TM BUFFERED] Buffered Tile Range: C(${bufferedStartCol}-${bufferedEndCol}), R(${bufferedStartRow}-${bufferedEndRow})`);
+        Logger.trace(`[TM VIEW] View Tile Range: C(${viewStartCol}-${viewEndCol}), R(${viewStartRow}-${viewEndRow})`);
 
-        // Your old log line for PlayerY can stay
-        Logger.trace(`%c[TilemapRenderer.draw] PlayerY: ${camera.target ? camera.target.y : 'N/A'}`, "background: #eee; color: #333");
-        // Remove or comment out your old line 69 log to avoid confusion with the new ones above.
-
-
-
-
-
-
-
+        let tilesProcessedInLoop = 0; // Use a different name if you already have 'tilesProcessed'
         for (let row = clampedStartRow; row <= clampedEndRow; row++) {
             for (let col = clampedStartCol; col <= clampedEndCol; col++) {
+                tilesProcessedInLoop++;
                 const tileId = this.tileData[row][col];
                 const tileTypeInfo = this.tileConfig.MAP[tileId];
 
+                if (tilesProcessedInLoop >= 65 && tilesProcessedInLoop <= 75) { // Log around the suspected cutoff
+                    console.group(`[TM Detailed Log] Tile #${tilesProcessedInLoop} (World R:${row}, C:${col})`);
+                    console.log(`  Raw tileId from tileData: ${tileId}`);
+                    console.log(`  tileTypeInfo from tileConfig.MAP[${tileId}]:`, tileTypeInfo);
+                    if (tileTypeInfo && tileTypeInfo.spriteName) {
+                        console.log(`    tileTypeInfo.spriteName: ${tileTypeInfo.spriteName}`);
+                        if (this.masterSpriteData && this.masterSpriteData.frames) {
+                            const spriteInfoForThisTile = this.masterSpriteData.frames[tileTypeInfo.spriteName];
+                            console.log(`    spriteInfo from masterSpriteData.frames['${tileTypeInfo.spriteName}']:`, spriteInfoForThisTile);
+                            if (!spriteInfoForThisTile) {
+                                console.warn(`      ----> CONDITION 2 (if spriteInfo) will FAIL here!`);
+                            }
+                        } else {
+                            console.warn('      MasterSpriteData or .frames is missing!');
+                        }
+                    } else {
+                        if (!tileTypeInfo) {
+                            console.warn(`      ----> CONDITION 1 (if tileTypeInfo...) will FAIL here because tileTypeInfo is falsy!`);
+                        } else if (!tileTypeInfo.spriteName) {
+                            console.warn(`      ----> CONDITION 1 (if tileTypeInfo.spriteName...) will FAIL here because spriteName is missing/falsy!`);
+                        }
+                    }
+                    console.groupEnd();
+                }
+
+                // Your existing drawing logic:
                 if (tileTypeInfo && tileTypeInfo.spriteName) {
                     const spriteInfo = this.masterSpriteData.frames[tileTypeInfo.spriteName];
                     if (spriteInfo) {
-                        const sourceX = spriteInfo.frame.x;
-                        const sourceY = spriteInfo.frame.y;
-                        const sourceWidth = spriteInfo.frame.w;
-                        const sourceHeight = spriteInfo.frame.h;
-
-                       // const drawX = col * this.tileSize;
-                       // const drawY = row * this.tileSize;
                         const screenDrawX = col * this.tileSize - camera.x;
                         const screenDrawY = row * this.tileSize - camera.y;
-                        // The actual drawing on the canvas.
-                        // The camera.apply(ctx) in the main game loop will handle translating this
-                        // to the correct screen position.
-                        ctx.drawImage(
-                            this.masterSheet,
-                            sourceX, sourceY, sourceWidth, sourceHeight,
-                            screenDrawX, screenDrawY, this.tileSize, this.tileSize
-                        );
-                    } else {
-                        // Logger.warn(`TilemapRenderer: Sprite '${tileTypeInfo.spriteName}' not found in master sheet data for tile ID ${tileId}.`);
+                        let debug = true;
+                        if (debug) {
+                            ctx.strokeStyle = 'red';
+                            ctx.strokeRect(screenDrawX, screenDrawY, this.tileSize, this.tileSize);
+                        } else {
+                            ctx.drawImage(
+                                this.masterSheet,
+                                sourceX, sourceY, sourceWidth, sourceHeight,
+                                screenDrawX, screenDrawY, this.tileSize, this.tileSize
+                            );
+                        }
                     }
                 }
             }
         }
+        Logger.debug(`[TM] Total tiles processed by loop: ${tilesProcessedInLoop}`); // You already have a similar log
+
     }
 
     // Helper function to get tile type at a specific world coordinate (useful for collision)
