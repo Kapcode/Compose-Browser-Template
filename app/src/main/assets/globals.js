@@ -1,5 +1,9 @@
 // ./globals.js
 // --- Game Config / Native Dimensions ---
+
+export const DEBUG_MODE = true; // Set to true to see debug drawing, false to hide
+
+
 export const nativeGameWidth = 1280;
 export const nativeGameHeight = 720;
 export let nativeGameAspectRatio = nativeGameWidth / nativeGameHeight;
@@ -104,15 +108,42 @@ export const ANIMATIONS = {
 export const TILE_CONFIG = {
     TILE_SIZE: 64, // The width and height of your tiles in pixels
     MAP: {
-        0: null, // 0 might mean an empty space, so no tile to draw
-        1: { spriteName: 'bricked_tile-23.png' }, // just brick Example sprite name from your master.json
-        2: { spriteName: 'bricked_tile-15.png' }, // slimed_brick
-        3: { spriteName: 'bricked_tile-6.png' }, //cracked brick
-        // Add more mappings as needed
-        // You can also add properties like:
-        // 4: { spriteName: 'lava.png', isSolid: true, isHarmful: true },
+        // For tile ID 0 (typically empty space)
+        0: {
+            // You might not even need a spriteName if it's never drawn
+            // or if your TilemapRenderer skips drawing null/ID 0.
+            // But it's good practice to define its properties if it can exist in your tileData.
+            spriteName: null, // Or an 'empty_tile.png' if you have one
+            solid: false      // Explicitly not solid
+        },
+
+        // For tile ID 1 (your 'bricked_tile-23.png')
+        1: {
+            spriteName: 'bricked_tile-23.png',
+            solid: true       // Make this tile type solid
+        },
+
+        // For tile ID 2 (your 'bricked_tile-15.png')
+        2: {
+            spriteName: 'bricked_tile-15.png',
+            solid: true       // Make this tile type solid
+        },
+
+        // For tile ID 3 (your 'bricked_tile-6.png')
+        3: {
+            spriteName: 'bricked_tile-6.png',
+            solid: true       // Make this tile type solid
+        }
+
+        // Add more mappings as needed for other tile types:
+        // For example, if you add a tile ID 4 for 'water':
+        // 4: { spriteName: 'water_tile.png', solid: false, isHarmful: true /* or some other property */ },
+
+        // And if you add a tile ID 5 for 'spikes':
+        // 5: { spriteName: 'spikes.png', solid: false, isHarmful: true, damage: 10 }
     }
 };
+
 
 // Ensure this is accessible, e.g., by importing globals or TILE_CONFIG
 

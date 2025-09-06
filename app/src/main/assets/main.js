@@ -20,7 +20,7 @@ import { Logger } from './logger.js';//todo import logger in all other files
 
 
 // --- Initialize Log Level (typically once at application start) ---
-Logger.setLogLevel(Logger.LEVELS.TRACE); // Or whatever level you want//todo change for release
+Logger.setLogLevel(Logger.LEVELS.INFO); // Or whatever level you want//todo change for release
 
 // --- Example Log Calls ---
 Logger.always('AppInit', 'Application Core Initialized.');
@@ -267,8 +267,10 @@ function setupSceneFromLevelData(levelData) {
 
     // 2. Setup Player
     if (levelData.playerStart) {
+        tilemapRenderer = new TilemapRenderer(levelData.tilemap, TILE_CONFIG);
+        Logger.info("[Main.js] TilemapRenderer created.");
         // Assuming createPicklePlayerInstance or new Player()
-        player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, globals.default_player_health, globals.default_player_speed);//last is speed
+        player = createPicklePlayerInstance(levelData.playerStart.x, levelData.playerStart.y, "pickle_player_idle", globals.default_scale, globals.default_player_health, globals.default_player_speed,tilemapRenderer);//last is speed//todo ADD TILEMAP INSTANCE HERE THIS WILL CRASH
         // If your player is part of activeGameElements for updates:
          activeGameElements.push(player);
         window.camera.follow(player);
@@ -298,8 +300,7 @@ function setupSceneFromLevelData(levelData) {
 
     // 4. Setup Tilemap (if you have one)
     if (levelData.tilemap) {
-        tilemapRenderer = new TilemapRenderer(levelData.tilemap, TILE_CONFIG);
-        Logger.info("[Main.js] TilemapRenderer created.");
+        ////todo moved tile map rendere creation up to right before player creation!//todo
         // UPDATE CAMERA'S WORLD SIZE
         if (window.camera && tilemapRenderer) {
             const mapW = tilemapRenderer.getMapWidth();
@@ -488,7 +489,7 @@ function gameLoop(currentTimestamp) {
 
     activeGameElements.forEach(element => {
         if (element && typeof element.draw === 'function') {
-            element.draw(ctx); // element.draw should use its own world x,y
+            element.draw(ctx,window.camera); // element.draw should use its own world x,y
         }
     });
 

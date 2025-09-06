@@ -9,10 +9,10 @@ export class TilemapRenderer {
         this.tileSize = this.tileConfig.TILE_SIZE;
         this.rows = this.tileData.length;
         this.cols = this.tileData[0] ? this.tileData[0].length : 0; // Get dimensions
-        //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteData());//crash
-        //Logger.log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY));//crash
+        //Logger._log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteData());//crash
+        //Logger._log(`TM: asset manager sprite data in constructor`,assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY));//crash
 
-       console.log(`TM constructor: cols rows tileSize`,this.cols,this.rows,this.tileSize);//no crash
+       //console.log(`TM constructor: cols rows tileSize`,this.cols,this.rows,this.tileSize);//no crash
 
         // THE CRITICAL LINES:
         this.masterSpriteData = assetManager.getSpriteData(globals.MASTER_SPRITE_SHEET_KEY);
@@ -20,8 +20,9 @@ export class TilemapRenderer {
         // Line ~14 or ~15:
         this.spriteData = assetManager.getSpriteData(); // For the JSON data
         this.masterSheet = assetManager.getSpriteSheetImage(globals.MASTER_SPRITE_SHEET_KEY); // MASTER_SPRITE_SHEET_KEY is likely "master_spritesheet"
-        //Logger.log(`TM: asset manager sprite data in constructor`,this.masterSpriteData,this.masterSheet);
+        //Logger._log(`TM: asset manager sprite data in constructor`,this.masterSpriteData,this.masterSheet);
         //console.log(`TM: asset manager sprite data in constructor`,JSON.stringify(this.tileData),this.masterSheet);//crash
+        //Logger.trace(`TM: asset manager sprite data in constructor`,this.masterSheet);//crash //that only crashes if you dont use logger correctly. _log not log
 
         if (!this.masterSheet || !this.masterSpriteData) {
             Logger.error("TilemapRenderer: Master spritesheet or sprite data not found!");
@@ -99,25 +100,25 @@ export class TilemapRenderer {
                 const tileTypeInfo = this.tileConfig.MAP[tileId];
 
                 if (tilesProcessedInLoop >= 65 && tilesProcessedInLoop <= 75) { // Log around the suspected cutoff
-                    console.group(`TAGGG[TM Detailed Log] Tile #${tilesProcessedInLoop} (World R:${row}, C:${col})`);
-                    console.log(`TAGGG  Raw tileId from tileData: ${tileId}`);
-                    console.log(`TAGGG  tileTypeInfo from tileConfig.MAP[${tileId}]:`, tileTypeInfo);
+                    Logger.trace(`TAGGG[TM Detailed Log] Tile #${tilesProcessedInLoop} (World R:${row}, C:${col})`);
+                    Logger.trace(`TAGGG  Raw tileId from tileData: ${tileId}`);
+                    Logger.trace(`TAGGG  tileTypeInfo from tileConfig.MAP[${tileId}]:`, tileTypeInfo);
                     if (tileTypeInfo && tileTypeInfo.spriteName) {
-                        console.log(`TAGGG    tileTypeInfo.spriteName: ${tileTypeInfo.spriteName}`);
+                        Logger.trace(`TAGGG    tileTypeInfo.spriteName: ${tileTypeInfo.spriteName}`);
                         if (this.masterSpriteData && this.masterSpriteData.frames) {
                             const spriteInfoForThisTile = this.masterSpriteData.frames[tileTypeInfo.spriteName];
-                            console.log(`TAGGG    spriteInfo from masterSpriteData.frames['${tileTypeInfo.spriteName}']:`, spriteInfoForThisTile);
+                            Logger.trace(`TAGGG    spriteInfo from masterSpriteData.frames['${tileTypeInfo.spriteName}']:`, spriteInfoForThisTile);
                             if (!spriteInfoForThisTile) {
-                                console.warn(`TAGGG      ----> CONDITION 2 (if spriteInfo) will FAIL here!`);
+                                Logger.trace(`TAGGG      ----> CONDITION 2 (if spriteInfo) will FAIL here!`);
                             }
                         } else {
-                            console.warn('TAGGG      MasterSpriteData or .frames is missing!');
+                            Logger.trace('TAGGG      MasterSpriteData or .frames is missing!');
                         }
                     } else {
                         if (!tileTypeInfo) {
-                            console.warn(`TAGGG      ----> CONDITION 1 (if tileTypeInfo...) will FAIL here because tileTypeInfo is falsy!`);
+                            Logger.trace(`TAGGG      ----> CONDITION 1 (if tileTypeInfo...) will FAIL here because tileTypeInfo is falsy!`);
                         } else if (!tileTypeInfo.spriteName) {
-                            console.warn(`TAGGG      ----> CONDITION 1 (if tileTypeInfo.spriteName...) will FAIL here because spriteName is missing/falsy!`);
+                            Logger.trace(`TAGGG      ----> CONDITION 1 (if tileTypeInfo.spriteName...) will FAIL here because spriteName is missing/falsy!`);
                         }
                     }
                     console.groupEnd();
@@ -182,4 +183,44 @@ export class TilemapRenderer {
     getMapHeight() {
         return this.rows * this.tileSize;
     }
+
+
+    // In TilemapRenderer.js
+
+    // ... (constructor and other methods) ...
+
+    getTileIdAt(col, row) {
+        // Check bounds to prevent errors
+        if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
+            return this.tileData[row][col]; // Assuming this.tileData is your 2D array of IDs
+        }
+        return -1; // Or any value that your TILE_CONFIG.MAP doesn't use for actual tiles
+        // This often signifies "out of bounds"
+    }
+
+    isTileSolid(col, row) {
+        const tileId = this.getTileIdAt(col, row);
+
+        // Treat out-of-bounds as solid to prevent walking off the map,
+        // or return false if you want to allow falling off edges.
+        if (tileId === -1) {
+            // Logger.debug(`[isTileSolid] Coords (${col},${row}) are out of bounds. Treating as SOLID.`);
+            return true; // Common practice to make map boundaries solid
+        }
+
+        // Get the properties for this specific tile ID from your config
+        const tileProperties = this.tileConfig.MAP[tileId];
+
+        // If there's no definition for this tileId, or if it has no 'solid' property,
+        // or if 'solid' is explicitly false, then it's not solid.
+        if (tileProperties && tileProperties.solid === true) { // Check for explicit true
+            // Logger.debug(`[isTileSolid] Coords (${col},${row}), ID: ${tileId}. Is SOLID.`);
+            return true;
+        }
+
+        // Logger.debug(`[isTileSolid] Coords (${col},${row}), ID: ${tileId}. Not solid.`);
+        return false; // Default to not solid
+    }
+
+
 }
