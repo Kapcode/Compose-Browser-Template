@@ -1,8 +1,10 @@
 // ./globals.js
 // --- Game Config / Native Dimensions ---
 
-export const DEBUG_MODE = true; // Set to true to see debug drawing, false to hide
-
+export let DEBUG_MODE = true; // Set to true to see debug drawing, false to hide
+export function debugMode(value) {
+    DEBUG_MODE = value;
+}
 
 export const nativeGameWidth = 1280;
 export const nativeGameHeight = 720;

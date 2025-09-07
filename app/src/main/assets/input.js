@@ -17,6 +17,7 @@ const keyMap = {
 
     // Actions
     ' ': 'jump',        // Space bar for jump
+    'Space': 'jump',
     'Enter': 'actionPrimary', // Or 'fire', 'interact'
     'Control': 'actionSecondary', // Or 'specialAbility'
     'Shift': 'sprint',

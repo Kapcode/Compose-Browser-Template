@@ -21,7 +21,7 @@ import { Logger } from './logger.js';//todo import logger in all other files
 
 // --- Initialize Log Level (typically once at application start) ---
 Logger.setLogLevel(Logger.LEVELS.INFO); // Or whatever level you want//todo change for release
-
+globals.debugMode(false);//todo change for release;
 // --- Example Log Calls ---
 Logger.always('AppInit', 'Application Core Initialized.');
 //Logger.info('GameManager', 'Level 5 started.');
@@ -64,7 +64,6 @@ function initializeCoreGameSystems() {
     Logger.info(`[Main.js PRE-CAMERA] [Camera] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
     window.camera = new Camera(0, 0, globals.nativeGameWidth, globals.nativeGameHeight,gameWorldWidth, gameWorldHeight); // Start with 0 world size
     Logger.info(`[Main.js PRE-CAMERA  [Camera]--post constructor] gameWorldWidth intended for constructor: ${gameWorldWidth}, gameWorldHeight: ${gameWorldHeight}`);
-
     Logger.info("[Main.js] Camera initialized.");
     // ...
 }
@@ -289,7 +288,7 @@ function setupSceneFromLevelData(levelData) {
                     globals.default_scale, // Or from enemyInfo
                     enemyInfo.health || 100,
                     enemyInfo.speed || 80,
-                    enemyInfo.patrolMinX, enemyInfo.patrolMaxX
+                    enemyInfo.patrolMinX, enemyInfo.patrolMaxX,tilemapRenderer
                 );
                 // If createPatrolingChef doesn't add to activeGameElements, do it here:
                  activeGameElements.push(chef);
@@ -494,7 +493,7 @@ function gameLoop(currentTimestamp) {
     });
 
     // Logger.debug(`[GameLoop] AFTER drawing game elements. Camera still at: camera.x = ${window.camera.x.toFixed(2)}`);
-
+    // ...
     // 5. Restore the canvas state. This undoes BOTH the camera translation
     // AND the global scaling/offset, returning to screen coordinates.
     ctx.restore();
@@ -510,25 +509,17 @@ function gameLoop(currentTimestamp) {
     // ctx.fillStyle = 'white';
     // ctx.fillText('Score: ' + gameScore, 10, 30);
 
+    // 7. Draw Camera Dead Zone (if in debug mode and camera exists)
+    if (globals.DEBUG_MODE && window.camera && typeof window.camera.drawDeadZoneDebug === 'function') {
+        window.camera.drawDeadZoneDebug(ctx, globals.sceneState.currentScale, globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
+    }
 
     // --- Visualize Canvas Boundary (which is also the Camera Viewport in this case) ---
-    // This strokeRect should be outside the save/restore if you want to see
-    // the true canvas boundary in screen coordinates.
-    // If you want to see the boundary of your SCALED game area, draw it
-    // INSIDE the save/restore, just before the restore, using native coordinates (0,0 to nativeWidth, nativeHeight).
     ctx.strokeStyle = 'lime';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, canvas.width, canvas.height); // Draws around the whole actual canvas
 
-    // To visualize the scaled native game area:
-    // ctx.save();
-    // ctx.translate(globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
-    // ctx.scale(globals.sceneState.currentScale, globals.sceneState.currentScale);
-    // ctx.strokeStyle = 'cyan';
-    // ctx.strokeRect(0, 0, globals.nativeGameWidth, globals.nativeGameHeight); // Or camera.width if it's native
-    // ctx.restore();
-
-
+    // ...
     animationFrameId = requestAnimationFrame(gameLoop);
 }
 

@@ -1,110 +1,99 @@
 import { Character } from './Character.js';
 import * as globals from './globals.js';
-import { assetManager } from './AssetManager.js';//import assetManager singlton
-export class EnemyPatrol extends Character {
-    constructor(x, y, animationName, spriteScale, health, speed, patrolMinX, patrolMaxX) {
-        // Assumes Character/Sprite constructor correctly uses globals.ANIMATIONS
-        super(x, y, animationName, spriteScale, health, speed);
-        this.entityType = "enemy_chef_ketchup_patrol";
-        // VVVVVV INITIALIZE movingRight HERE VVVVVV
-        this.movingRight = true; // Or false, depending on which way you want it to start
-        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        this.direction = { x: 0, y: 0 };
+import { Logger } from './logger.js'; 
 
-        this.direction.x = 1;
+export class EnemyPatrol extends Character {
+    constructor(x, y, animationName, spriteScale, health, speed, patrolMinX, patrolMaxX, tilemap) {
+        const enemyHitboxConfig = {
+            applyGravity: true,
+            // Example: if chef sprite needs specific offsets different from Character defaults
+            // offsetX: 4, 
+            // offsetY: 5,
+            // width: desiredStaticWidth, // Set these if chef animations also cause hitbox size flicker
+            // height: desiredStaticHeight
+        };
+        super(x, y, animationName, spriteScale, health, speed, tilemap, enemyHitboxConfig);
+        
+        this.entityType = "enemy_chef_ketchup_patrol";
+        this.patrolDirectionX = 1; // 1 for right, -1 for left
+        this.facingDirection = 1;
+        this.initialAnimationName = animationName; // Store initial animation for patrol
 
         this.patrolMinX = patrolMinX;
         this.patrolMaxX = patrolMaxX;
-        if (globals.debugDraw) console.log(`EnemyPatrol CONSTRUCTOR: Spawned with patrolMinX=${this.patrolMinX}, patrolMaxX=${this.patrolMaxX}`);
     }
 
-    update(deltaTime, currentTime, activeGameElementsRef) { // activeGameElementsRef is activeGameElements
+    update(deltaTime, currentTime, activeGameElementsRef) {
+        if (!this.isActive) return;
 
-        //console.log(`[ChefEnemy Update] ID: ${this.id || 'N/A'}, Pos: (${this.x}, ${this.y}), Speed: ${this.speed}, MovingRight: ${this.movingRight}, MinX: ${this.patrolMinX}, MaxX: ${this.patrolMaxX}, Anim: ${this.currentAnimationName}`);
-        // Ensure this.currentAnimationName is valid and exists in globals.ANIMATIONS
-        if (!this.currentAnimationName || !globals.ANIMATIONS[this.currentAnimationName]) {
-            console.error(`[EnemyPatrol Update] Invalid or missing animation: "${this.currentAnimationName}". Entity: ${this.entityType}`);
-            return; // Stop further processing if animation data is missing
+        // 1. Apply physics (gravity) - Updates this.velocityY
+        this.updatePhysics(deltaTime);
+
+        // 2. Determine intended horizontal movement based on patrol logic
+        let dx = 0;
+        // Only allow horizontal patrol movement if applyGravity is off, OR if grounded and applyGravity is on.
+        if (!this.applyGravity || (this.isGrounded && this.applyGravity)) {
+             dx = this.patrolDirectionX * this.speed * deltaTime;
         }
+       
+        // 3. Calculate vertical movement based on current velocityY
+        let dy = this.velocityY * deltaTime;
 
-        // VVVVVV  THE CHANGE IS HERE VVVVVV
-        const animationData = globals.ANIMATIONS[this.currentAnimationName];
-        // ^^^^^^  Use this.currentAnimationName ^^^^^^
+        const previousX = this.x; // Store X before collision for wall detection
 
+        // 4. Handle Tile Collision (updates this.x, this.y, and this.velocityY on impact)
+        this.handleTileCollision(dx, dy);
 
-        // This part now uses animationData which is globals.ANIMATIONS[this.currentAnimationName]
-        const currentFrameInfo = animationData.frames[this.currentFrameIndex];
-        //console.log(`spritSheetData = ${JSON.stringify(assetManager.getSpriteData())}`);
-        let spriteNameForDimensions;
+        // 5. Check if Grounded (sets this.isGrounded and stabilizes velocityY if on ground)
+        this.checkGrounded();
 
-        if (typeof currentFrameInfo === 'string') {
-            spriteNameForDimensions = currentFrameInfo;
-        } else if (typeof currentFrameInfo === 'object' && currentFrameInfo.name) {
-            spriteNameForDimensions = currentFrameInfo.name;
+        // 6. Patrol Logic: Adjust direction if boundaries or walls are hit
+        // Only turn if patrolling horizontally (dx was potentially non-zero)
+        if (dx !== 0) { // Check if it was attempting to move horizontally
+            if (this.patrolDirectionX > 0) { // Moving right
+                if ((this.x + this.hitboxOffsetX + this.hitboxWidth) >= this.patrolMaxX) {
+                    //this.x = this.patrolMaxX - (this.hitboxOffsetX + this.hitboxWidth); // Clamp position
+                    this.patrolDirectionX = -1;
+                    this.facingDirection = -1;
+                } else if (this.x <= previousX && this.isGrounded) { // Hit a wall (position didn't change or moved back)
+                    this.patrolDirectionX = -1;
+                    this.facingDirection = -1;
+                }
+            } else if (this.patrolDirectionX < 0) { // Moving left
+                if ((this.x + this.hitboxOffsetX) <= this.patrolMinX) {
+                    //this.x = this.patrolMinX - this.hitboxOffsetX; // Clamp position
+                    this.patrolDirectionX = 1;
+                    this.facingDirection = 1;
+                } else if (this.x >= previousX && this.isGrounded) { // Hit a wall
+                    this.patrolDirectionX = 1;
+                    this.facingDirection = 1;
+                }
+            }
+        }
+        
+        // 7. Update Animations based on state
+        if (this.applyGravity && !this.isGrounded) {
+            // this.setAnimation('chef_fall'); // IF you have a specific fall animation for chef
         } else {
-            console.error(`[EnemyPatrol Update] Invalid frame info in animation "${this.currentAnimationName}" at index ${this.currentFrameIndex}.`);
-            return;
+            // this.setAnimation(this.initialAnimationName); // Back to patrol animation
         }
+        // Base animation (e.g., walk cycle) is often handled by Sprite based on currentAnimationName
+        // which we might not want to change every frame here unless state demands it (like falling).
 
-        // Now get the actual sprite definition from assetManager's spriteData
-        const spriteSheetData = assetManager.getSpriteData(); // Assuming you have access to assetManager
-        if (!spriteSheetData || !spriteSheetData.frames[spriteNameForDimensions]) {
-            console.error(`[EnemyPatrol Update] Sprite definition for "${spriteNameForDimensions}" not found in assetManager.`);
-            return;
-        }
-        const currentFrameDef = spriteSheetData.frames[spriteNameForDimensions]; // This is the definition from JSON
-
-
-        // The rest of your ChefEnemy.js:20 was:
-        // const currentFrameDef = globals.ANIMATIONS[this.animationName].frames[this.currentFrameIndex];
-        //
-        // Which means you were trying to get sWidth from the ANIMATIONS structure in globals.js,
-        // but sWidth should now come from the JSON data via assetManager.getSpriteData().frames[SPRITE_NAME].frame.w
-
-        // If you need sWidth, it should be:
-        // const currentSpriteOnSheetDetails = currentFrameDef.frame; // {x, y, w, h} on the sheet
-        // const sWidth = currentSpriteOnSheetDetails.w;
-        // However, this.width (from Sprite class) should already have the scaled width.
-
-        if (!currentFrameDef || !currentFrameDef.frame || typeof currentFrameDef.frame.w === 'undefined') { // Check the actual structure from your JSON
-            console.error(`[EnemyPatrol Update] Invalid currentFrameDef or frame.w for sprite ${spriteNameForDimensions}. Entity: ${this.entityType}`);
-            return;
-        }
-
-        // this.width is the logical width of the sprite, already scaled.
-        // If you need the *native* width from the sheet for some calculation:
-        const nativeSpriteWidthOnSheet = currentFrameDef.frame.w;
-        const currentSpriteEffectiveWidth = this.width; // This is already scaled (sourceSize.w * spriteScale)
-
-        // Your boundary check logic:
-        if (this.direction.x > 0 && (this.x + currentSpriteEffectiveWidth) >= this.patrolMaxX) {
-            this.x = this.patrolMaxX - currentSpriteEffectiveWidth;
-            this.direction.x = -1;
-            this.facingDirection = -1; // Make sure Sprite class uses this for flipping
-        } else if (this.direction.x < 0 && this.x <= this.patrolMinX) {
-            this.x = this.patrolMinX;
-            this.direction.x = 1;
-            this.facingDirection = 1; // Make sure Sprite class uses this for flipping
-        }
-
-        this.x += this.direction.x * this.speed * deltaTime;
-        super.update(deltaTime, currentTime, activeGameElementsRef);//call update super update last...
-        //this.y += this.direction.y * this.speed * deltaTime;
-
+        // 8. Call Character's update (handles animation frame updates from Sprite class)
+        super.update(deltaTime, currentTime, activeGameElementsRef);
     }
 }
+
 export let eChef1 = null;
-export function createPatrolingChef(x,y,animationName,spriteScale,health,speed,patrolMinX,patrolMaxX){
+
+export function createPatrolingChef(x, y, animationName, spriteScale, health, speed, patrolMinX, patrolMaxX, tilemap) {
     eChef1 = new EnemyPatrol(
-        x,
-        y, // Assuming nativeGameHeight from globals
-        animationName,
-        spriteScale,
-        health, // health
-        speed, // speed
-        patrolMinX,  // patrolMinX
-        patrolMaxX // patrolMaxX, assuming nativeGameWidth from globals
+        x, y, 
+        animationName, spriteScale, 
+        health, speed, 
+        patrolMinX, patrolMaxX, 
+        tilemap
     );
-    console.log("[ChefEnemy.js] eChef1 instance created and assigned:", eChef1);
     return eChef1;
 }
