@@ -162,6 +162,10 @@ export class LevelManager {
         return this.manifest.levels[this.currentLevelIndex];
     }
 
+    isManifestLoaded() {
+        return this.manifest !== null;
+    }
+
     getTotalLevels() {
         return this.manifest ? this.manifest.totalLevels : 0;
     }

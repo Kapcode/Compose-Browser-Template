@@ -11,15 +11,15 @@ export class Player extends Character {
             applyGravity: true,
             width: 50, 
             height: 86,
-            jumpHeightInTileQuarters: 12 // NEW: Player's jump apex will be 1 tile high (4 * 1/4)
+            jumpHeightInTileQuarters: 14 // NEW: Player's jump apex will be 1 tile high (4 * 1/4)
         };
         super(x, y, animationName, spriteScale, health, speed, tilemap, playerHitboxConfig);
         this.entityType = "player_pickle"; // Corrected from 'player' based on previous findings
         // ADD THIS LOG:
-        console.log(`[Player CONSTRUCTOR] Initial raw x: ${x}, y: ${y}`);
-        console.log(`[Player CONSTRUCTOR] this.x: ${this.x.toFixed(2)}, this.y: ${this.y.toFixed(2)}, this.velocityY: ${this.velocityY.toFixed(2)}`);
-        console.log(`[Player CONSTRUCTOR] Hitbox: offX=${this.hitboxOffsetX}, offY=${this.hitboxOffsetY}, w=${this.hitboxWidth}, h=${this.hitboxHeight}`);
-        console.log(`[Player CONSTRUCTOR] Calculated jumpStrength: ${this.jumpStrength ? this.jumpStrength.toFixed(2) : 'N/A (calculated in Character.js)'}`);
+        Logger.trace(`[Player CONSTRUCTOR] Initial raw x: ${x}, y: ${y}`);
+        Logger.trace(`[Player CONSTRUCTOR] this.x: ${this.x.toFixed(2)}, this.y: ${this.y.toFixed(2)}, this.velocityY: ${this.velocityY.toFixed(2)}`);
+        Logger.trace(`[Player CONSTRUCTOR] Hitbox: offX=${this.hitboxOffsetX}, offY=${this.hitboxOffsetY}, w=${this.hitboxWidth}, h=${this.hitboxHeight}`);
+        Logger.trace(`[Player CONSTRUCTOR] Calculated jumpStrength: ${this.jumpStrength ? this.jumpStrength.toFixed(2) : 'N/A (calculated in Character.js)'}`);
 
     }
 
@@ -29,7 +29,7 @@ export class Player extends Character {
         // ADD THESE LOGS AT THE START OF UPDATE:
         if (this.entityType === 'player_pickle' && typeof window.playerUpdateCount === 'undefined') window.playerUpdateCount = 0;
         if (this.entityType === 'player_pickle' && window.playerUpdateCount < 10) { // Log first 10 updates
-            console.log(`[Player UPDATE #${window.playerUpdateCount}] dt: ${deltaTime.toFixed(4)}, this.x: ${this.x.toFixed(2)}, this.y: ${this.y.toFixed(2)}, this.velocityY: ${this.velocityY.toFixed(2)}, this.isGrounded: ${this.isGrounded}`);
+            Logger.trace(`[Player UPDATE #${window.playerUpdateCount}] dt: ${deltaTime.toFixed(4)}, this.x: ${this.x.toFixed(2)}, this.y: ${this.y.toFixed(2)}, this.velocityY: ${this.velocityY.toFixed(2)}, this.isGrounded: ${this.isGrounded}`);
             window.playerUpdateCount++;
         }
 
