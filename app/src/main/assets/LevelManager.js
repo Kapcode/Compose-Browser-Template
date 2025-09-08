@@ -162,6 +162,18 @@ export class LevelManager {
         return this.manifest.levels[this.currentLevelIndex];
     }
 
+    /**
+     * Returns the array of level information objects from the manifest.
+     * @returns {Array<object>|null} Array of levels, or null if manifest not loaded.
+     */
+    getAvailableLevels() {
+        if (!this.manifest || !this.manifest.levels) {
+            console.warn("LevelManager: Manifest or levels array not available.");
+            return null;
+        }
+        return this.manifest.levels;
+    }
+
     isManifestLoaded() {
         return this.manifest !== null;
     }

@@ -27,7 +27,7 @@ export function createPicklePlayerInstance(x, y, animationName, spriteScale,heal
 }
 // Remember to call this in your game loop's update phase:
 // In updateGameLogic(deltaTime):
-//   const pickle = activeGameElements.find(el => el.isPickle === true);
-//   if (pickle) {
-//     updatePickleMovement(pickle, deltaTime);
+//   const master = activeGameElements.find(el => el.isPickle === true);
+//   if (master) {
+//     updatePickleMovement(master, deltaTime);
 //   }

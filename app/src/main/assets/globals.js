@@ -27,17 +27,16 @@ export const sceneState = {
 
 
 
-
 export const debugDraw = true;
 
 // --- Asset Paths & Loading State ---
-export const SPRITE_SHEET_SRC = 'images/pickle/ms.png';//todo remove this was path in manifest, now im usinbg imagePath
-export const SPRITE_SHEET_PATH = 'images/pickle/master.png'; // Or make this SPRITE_SHEET_IMAGE_PATH
-export const SPRITE_SHEET_JSON_PATH = 'images/pickle/master.json'; // <<<< ADD THIS (Adjust path as needed)
+export const SPRITE_SHEET_SRC = 'images/master/ms.png';//todo remove this was path in manifest, now im usinbg imagePath
+export const SPRITE_SHEET_PATH = 'images/master/master.png'; // Or make this SPRITE_SHEET_IMAGE_PATH
+export const SPRITE_SHEET_JSON_PATH = 'images/master/master.json'; // <<<< ADD THIS (Adjust path as needed)
 export const MASTER_SPRITE_SHEET_KEY = 'master_spritesheet';
 
 export let spriteSheetLoadStatus = 'pending';
-// export const ASSET_PATHS = { masterSheet: 'images/pickle/ms.png' }; // Redundant if SPRITE_SHEET_SRC is used
+// export const ASSET_PATHS = { masterSheet: 'images/master/ms.png' }; // Redundant if SPRITE_SHEET_SRC is used
 export function setSpriteSheetLoadStatus(status) {
     spriteSheetLoadStatus = status;
 }
@@ -82,7 +81,7 @@ export const ANIMATIONS = {
         defaultAnimationSpeedFPS: 5,
         baseMovementSpeed: 0,
         frames: [
-            "walk-pickle-1.png", // Example sprite name
+            "walk-pickle-1.png", 
             "walk-pickle-4.png",
             "walk-pickle-5.png",
             "walk-pickle-6.png"
@@ -95,7 +94,7 @@ export const ANIMATIONS = {
         baseMovementSpeed: 0,
         baseSpeedModifier:1.8,// Movement speed might be handled by Player class itself
         frames: [
-            "walk-pickle-1.png", // Example sprite name
+            "walk-pickle-1.png", 
             "walk-pickle-4.png",
             "walk-pickle-5.png",
             "walk-pickle-6.png"

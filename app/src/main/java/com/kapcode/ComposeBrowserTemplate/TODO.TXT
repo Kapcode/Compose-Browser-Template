@@ -108,3 +108,30 @@ finish writing
 //.todo so that is going in my todo file, update assets to neat sizes. 64X64 24X24 and so on
 
 can you do a quick transformation from raw text to  html document with strong tags and br tags, and just very simple <p> tags, some listing tags <ol <ul> <li>, and <h1> tags  for the following text, I will format and customize mutch more witrh css and animations, fonts and all that soon after, please no added css styling: To be clear, I dont want the content of the text changed, Just it to be organized into the tags, formated into them, in a simple way, I will do the refining.     text =
+
+
+
+const assetsManifest = [
+        { key: globals.MASTER_SPRITE_SHEET_KEY, type: 'masterSpriteSheet', jsonPath: globals.SPRITE_SHEET_JSON_PATH, imagePath: globals.SPRITE_SHEET_PATH },
+        // Added background images
+        {
+            key: 'bg_sky_calm',
+            type: 'image',
+            path: 'assets/images/backgrounds/sky_calm.png'
+        },
+        {
+            key: 'bg_mountains_distant',
+            type: 'image',
+            path: 'assets/images/backgrounds/mountains_distant.png'
+        },
+        {
+            key: 'bg_forest_close',
+            type: 'image',
+            path: 'assets/images/backgrounds/forest_close.png'
+        },
+        {
+            key: 'bg_clouds_fast',
+            type: 'image',
+            path: 'assets/images/backgrounds/clouds_fast.png'
+        }
+    ];

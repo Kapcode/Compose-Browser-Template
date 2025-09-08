@@ -791,7 +791,7 @@ let pickel_svgStringValue = simplePickleSvgString; // Set to true to use the com
         let pickleSpawned =false;
         function gameLogic(liveGameArea) {
             if(pickleSpawned === false){
-                console.log("Spawning pickle for the first time.");
+                console.log("Spawning master for the first time.");
                             // Assuming createInstanceFromSVGString, liveGameArea, etc., are defined
             // and your swipe handling logic is in place (handleDocumentPointerMove, etc.)
 
