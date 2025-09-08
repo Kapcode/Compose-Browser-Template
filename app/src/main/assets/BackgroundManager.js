@@ -8,13 +8,8 @@ export class BackgroundManager {
         this.assetManager = null;
     }
 
-    /**
-     * Loads and prepares background layers based on the level data.
-     * @param {object} levelData - The loaded level JSON data.
-     * @param {object} assetManagerInstance - The global asset manager instance.
-     */
     loadLevelBackgrounds(levelData, assetManagerInstance) {
-        this.layers = []; // Clear any previous layers
+        this.layers = []; 
         this.assetManager = assetManagerInstance;
 
         if (!levelData || !levelData.backgroundLayers || !Array.isArray(levelData.backgroundLayers)) {
@@ -59,12 +54,7 @@ export class BackgroundManager {
         Logger.info(`[BackgroundManager] Processed ${this.layers.length} background layers.`);
     }
 
-    /**
-     * Draws all active background layers with parallax scrolling.
-     * @param {CanvasRenderingContext2D} ctx - The rendering context.
-     * @param {object} camera - The game camera object (needs x, y, width, height properties).
-     */
-    draw(ctx, camera) {
+    draw(ctx, camera, bufferAmount = 100, overlapAmount = 2) { 
         if (!camera) {
             Logger.warn('[BackgroundManager] Camera not available, cannot draw backgrounds.');
             return;
@@ -81,43 +71,77 @@ export class BackgroundManager {
 
             ctx.save();
 
-            let drawOffsetX = 0;
-            let drawOffsetY = 0;
-
+            let initialDrawOffsetX = 0;
             if (layer.repeatX) {
-                drawOffsetX = - (layerBaseX % layer.imgWidth);
-                if (drawOffsetX > 0) drawOffsetX -= layer.imgWidth;
+                initialDrawOffsetX = -(layerBaseX % layer.imgWidth);
+                if (initialDrawOffsetX > 0) initialDrawOffsetX -= layer.imgWidth;
             } else {
-                drawOffsetX = -layerBaseX;
+                initialDrawOffsetX = -layerBaseX;
             }
 
+            let initialDrawOffsetY = 0;
             if (layer.repeatY) {
-                drawOffsetY = - (layerBaseY % layer.imgHeight);
-                if (drawOffsetY > 0) drawOffsetY -= layer.imgHeight;
+                initialDrawOffsetY = -(layerBaseY % layer.imgHeight);
+                if (initialDrawOffsetY > 0) initialDrawOffsetY -= layer.imgHeight;
             } else {
-                drawOffsetY = -layerBaseY;
+                initialDrawOffsetY = -layerBaseY;
             }
             
-            // DEBUG LOG 1 (Added)
-            if (layer.assetKey === 'bg_mountains_distant') {
-                Logger.debug(`[BG DEBUG mountains] CamX: ${camX.toFixed(2)}, LayerBaseX: ${layerBaseX.toFixed(2)}, ImgWidth: ${layer.imgWidth}, DrawOffsetX: ${drawOffsetX.toFixed(2)}, CamWidth: ${camera.width.toFixed(2)}, RepeatX: ${layer.repeatX}`);
-            }
-            
-            let currentDrawX = drawOffsetX;
-            while (currentDrawX < camera.width) {
-                // DEBUG LOG 2 (Added)
-                if (layer.assetKey === 'bg_mountains_distant' && layer.repeatX) {
-                    Logger.debug(`[BG DEBUG mountains DrawLoop] Attempting to draw tile at currentDrawX: ${currentDrawX.toFixed(2)}`);
+            let currentDrawX = initialDrawOffsetX;
+            if (layer.repeatX) {
+                // Adjust currentDrawX to be the first tile whose right edge is beyond -bufferAmount
+                // This ensures we start drawing from the left buffer area if needed
+
+               // while (currentDrawX + layer.imgWidth < -bufferAmount) {// caused off by one error ... literaly palm face
+                while (currentDrawX + layer.imgWidth <= -bufferAmount - 0.001){
+                    currentDrawX += layer.imgWidth;
                 }
-                let currentDrawY = drawOffsetY;
-                while (currentDrawY < camera.height) {
-                    ctx.drawImage(layer.image, currentDrawX, currentDrawY, layer.imgWidth, layer.imgHeight);
-                    if (!layer.repeatY) break; 
+            }
+
+            // Loop for drawing in X dimension
+            // Continue as long as the tile's left edge is to the left of (camera.width + bufferAmount)
+            while (currentDrawX < camera.width + bufferAmount) {
+                // For non-repeating X, if this single draw is entirely to the left of the buffer, skip
+                if (!layer.repeatX && (currentDrawX + layer.imgWidth <= -bufferAmount)) {
+                    break; 
+                }
+
+                let currentDrawY = initialDrawOffsetY;
+                if (layer.repeatY) {
+                    // Adjust currentDrawY for the top buffer
+                    while (currentDrawY + layer.imgHeight < -bufferAmount) {
+                        currentDrawY += layer.imgHeight;
+                    }
+                }
+
+                // Loop for drawing in Y dimension
+                // Continue as long as the tile's top edge is above (camera.height + bufferAmount)
+                while (currentDrawY < camera.height + bufferAmount) {
+                    // For non-repeating Y, if this single draw is entirely above the buffer, skip
+                    if (!layer.repeatY && (currentDrawY + layer.imgHeight <= -bufferAmount)) {
+                        break;
+                    }
+
+                    // Determine draw width and height based on repetition and overlap
+                    let drawWidth = layer.imgWidth;
+                    let drawHeight = layer.imgHeight;
+
+                    if (layer.repeatX && overlapAmount > 0) {
+                        drawWidth += overlapAmount;
+                    }
+                    if (layer.repeatY && overlapAmount > 0) {
+                        drawHeight += overlapAmount;
+                    }
+
+                    ctx.drawImage(layer.image, currentDrawX, currentDrawY, drawWidth, drawHeight);
+
+                    if (!layer.repeatY) break; // If not repeating Y, draw once and exit Y loop
                     currentDrawY += layer.imgHeight;
-                }
-                if (!layer.repeatX) break; 
+                } // End Y loop
+
+                if (!layer.repeatX) break; // If not repeating X, draw once and exit X loop
                 currentDrawX += layer.imgWidth;
-            }
+            } // End X loop
             
             ctx.restore();
         });

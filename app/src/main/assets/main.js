@@ -7,6 +7,7 @@ import { setVolume, playPooledSound } from './audioManagement.js';
 import { loadSettings, loadProgress, saveProgress, saveSettings, updateSettingsFromUI, applyGameSettings, applyGameProgress, populateSettingsUI, addListenersForSettingsUI } from './settingsManagement.js';
 import { createPicklePlayerInstance } from './PickleMan.js';
 import { createPatrolingChef } from './ChefEnemy.js';
+import { Collectable } from './Collectable.js'; // Added Collectable import
 import { Camera } from './Camera.js';
 import * as gameState from './gameState.js';
 import { TilemapRenderer } from './TilemapRenderer.js';
@@ -209,6 +210,20 @@ function setupSceneFromLevelData(levelData) {
             }
         });
     }
+
+    // Setup Collectibles
+    if (levelData.collectibles && Array.isArray(levelData.collectibles)) {
+        levelData.collectibles.forEach(collectibleInfo => {
+            if (collectibleInfo.type && typeof collectibleInfo.x === 'number' && typeof collectibleInfo.y === 'number') {
+                const collectable = new Collectable(collectibleInfo.x, collectibleInfo.y, collectibleInfo.type, globals.default_scale);
+                activeGameElements.push(collectable);
+                Logger.info(`[Main.js] Created collectable: ${collectibleInfo.type} at (${collectibleInfo.x}, ${collectibleInfo.y})`);
+            } else {
+                Logger.warn("[Main.js] Invalid collectible data in level:", collectibleInfo);
+            }
+        });
+    }
+
     if (levelData.tilemap && window.camera && tilemapRenderer) {
         const mapW = tilemapRenderer.getMapWidth();
         const mapH = tilemapRenderer.getMapHeight();
@@ -442,14 +457,42 @@ function gameLoop(currentTimestamp) {
 
 function updateGameElements(deltaTime, currentTime) {
     let elementsToKeep = [];
+    let activeCollectables = []; // Store active collectables
+
     activeGameElements.forEach(element => {
         if (element.isActive) {
             element.update(deltaTime, currentTime, activeGameElements);
-            if (element.isActive) elementsToKeep.push(element);
+            if (element.isActive) { // Re-check isActive in case update() changed it
+                elementsToKeep.push(element);
+                // Ensure element has entityType before checking
+                if (element.entityType && element.entityType === 'collectable') { 
+                    activeCollectables.push(element);
+                }
+            }
         }
     });
-    activeGameElements = elementsToKeep;
+
+    // Player-Collectable Collision
+    if (player && player.isActive && activeCollectables.length > 0) {
+        activeCollectables.forEach(collectable => {
+            // Collectable is already confirmed active from the loop above
+            // AABB collision check (ensure player and collectable have x,y,width,height)
+            if (player.x < collectable.x + collectable.width &&
+                player.x + player.width > collectable.x &&
+                player.y < collectable.y + collectable.height &&
+                player.y + player.height > collectable.y) {
+                
+                collectable.onCollect(player);
+                // onCollect in Collectable.js sets its own isActive to false.
+                // The filter at the end of this function will handle removal.
+            }
+        });
+    }
+
+    // Filter out elements that became inactive (e.g., collected items)
+    activeGameElements = elementsToKeep.filter(el => el.isActive);
 }
+
 
 function stopGame() {
     if (animationFrameId) {
