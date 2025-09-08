@@ -14,7 +14,7 @@ import { BackgroundManager } from './BackgroundManager.js'; // Added
 import { TILE_CONFIG } from './globals.js';
 import { Logger } from './logger.js';
 
-Logger.setLogLevel(Logger.LEVELS.DEBUG);
+Logger.setLogLevel(Logger.LEVELS.INFO);
 globals.debugMode(false);
 Logger.always('AppInit', 'Application Core Initialized.');
 

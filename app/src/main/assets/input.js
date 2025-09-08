@@ -30,55 +30,67 @@ const keyMap = {
 };
 
 // --- Event Listeners ---
+
 function handleKeyDown(event) {
-    const originalKey = event.key; // Keep original if needed for some specific reason, or just use event.key directly
-    const processedKey = originalKey.toLowerCase(); // Convert to lowercase for map lookup and state storage
+    const originalKey = event.key;
+    const processedKey = originalKey.toLowerCase();
+    keyStates[processedKey] = true;
 
-    keyStates[processedKey] = true; // Store raw key state using the lowercase version
+    let finalAction = keyMap[processedKey];
+    if (!finalAction) {
+        finalAction = keyMap[originalKey]; // Fallback for keys not in lowercase in map (e.g. 'ArrowLeft', 'Shift')
+    }
 
-    // Use the lowercase key for map lookup
-    const action = keyMap[processedKey];
-    // OR if some keys in keyMap should remain case-sensitive (like 'Shift' vs 'shift' if you cared)
-    // you might need a more nuanced approach, but for WASD, lowercase is what you want.
-    // For general character keys like 'a', 'w', 's', 'd', 'p', 'm', you definitely want to check the lowercase version.
-    // For special keys like 'ArrowLeft', 'Enter', 'Control', 'Shift', 'Escape', their names don't change with CapsLock.
-    // So, a smart way is:
-    // const lookupKey = (originalKey.length === 1) ? originalKey.toLowerCase() : originalKey;
-    // const action = keyMap[lookupKey];
-
-    // Simpler: If your keyMap is ALL lowercase for character keys, then always use lowercase:
-    // const action = keyMap[processedKey]; <--- THIS is what you want for WASD
-
-    if (action) {
-        actionStates[action] = true;
-        // Logger.debug('Input', `Action started: ${action} (Key: ${originalKey} -> ${processedKey})`);
-    } else {
-        // Optional: Check if the original key (if different from lowercase) is in the map
-        // This handles cases where your keyMap might have "Shift" but not "shift"
-        const fallbackAction = keyMap[originalKey];
-        if (fallbackAction) {
-            actionStates[fallbackAction] = true;
-            // Logger.debug('Input', `Action started: ${fallbackAction} (Key: ${originalKey} - direct map)`);
+    if (finalAction) {
+        if (finalAction === 'moveLeft') {
+            actionStates['moveLeft'] = true;
+            actionStates['moveRight'] = false;
+        } else if (finalAction === 'moveRight') {
+            actionStates['moveRight'] = true;
+            actionStates['moveLeft'] = false;
+        } else {
+            // For other actions (jump, sprint, pauseGame, non-conflicting movements etc.)
+            actionStates[finalAction] = true;
         }
+        // Logger.debug('Input', `Action started: ${finalAction} (Key: ${originalKey} -> ${processedKey})`);
     }
 }
 
 function handleKeyUp(event) {
     const originalKey = event.key;
     const processedKey = originalKey.toLowerCase();
-
     keyStates[processedKey] = false;
 
-    const action = keyMap[processedKey];
-    if (action) {
-        actionStates[action] = false;
-        // Logger.debug('Input', `Action ended: ${action} (Key: ${originalKey} -> ${processedKey})`);
-    } else {
-        const fallbackAction = keyMap[originalKey];
-        if (fallbackAction) {
-            actionStates[fallbackAction] = false;
-            // Logger.debug('Input', `Action ended: ${fallbackAction} (Key: ${originalKey} - direct map)`);
+    let actionEnded = keyMap[processedKey];
+    if (!actionEnded) {
+        actionEnded = keyMap[originalKey]; // Fallback
+    }
+
+    if (actionEnded) {
+        actionStates[actionEnded] = false; // Set the primary action for the released key to false
+        // Logger.debug('Input', `Action ended: ${actionEnded} (Key: ${originalKey} -> ${processedKey})`);
+
+        // Reactivation logic for movement
+        if (actionEnded === 'moveLeft') {
+            // 'moveLeft' key was released. Check if any 'moveRight' key is still pressed.
+            for (const mapKey in keyMap) {
+                if (keyMap[mapKey] === 'moveRight' && keyStates[mapKey.toLowerCase()]) {
+                    actionStates['moveRight'] = true; // Reactivate moveRight
+                    // actionStates['moveLeft'] is already false from the line above
+                    break; 
+                }
+            }
+        } else if (actionEnded === 'moveRight') {
+            // 'moveRight' key was released. Check if any 'moveLeft' key is still pressed.
+            for (const mapKey in keyMap) {
+                if (keyMap[mapKey] === 'moveLeft' && keyStates[mapKey.toLowerCase()]) {
+                    actionStates['moveLeft'] = true; // Reactivate moveLeft
+                    // actionStates['moveRight'] is already false
+                    break;
+                }
+            }
         }
+        // Add similar blocks for 'moveUp'/'moveDown' if they should also have this override behavior
     }
 }
 
