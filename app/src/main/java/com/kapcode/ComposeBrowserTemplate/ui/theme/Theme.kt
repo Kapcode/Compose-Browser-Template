@@ -1,4 +1,4 @@
-package com.kapcode.ComposeBrowserTemplate.ui.theme
+package com.kapcode.composebrowsertemplate.ui.theme // Changed package name to lowercase
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

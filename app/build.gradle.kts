@@ -46,7 +46,6 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.1.2")) // Check for the latest BOM version
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.material:material:1.12.0") // Or the latest version
-    implementation("com.google.accompanist:accompanist-webview:0.34.0") // Check for latest or consider migrating
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

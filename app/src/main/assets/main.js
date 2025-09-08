@@ -145,6 +145,11 @@ function proceedToGameStartConditionCheck() {
         Logger.info("All prerequisites loaded successfully! Ready for user to start.");
         if (uiElements.gameLoadError) uiElements.gameLoadError.style.display = 'none';
         isGameReadyToStart = true;
+        if (canvas && (canvas.width < 10 || canvas.height < 10)) {
+            Logger.warn("[proceedToGameStartConditionCheck] Canvas size was small when buttons might have been created. Consider re-init.");
+        }
+        initializeWelcomeScreenButtons(); 
+
     } else {
         Logger.warn("[proceedToGameStartConditionCheck] Prerequisites not yet met.");
         isGameReadyToStart = false;
@@ -161,13 +166,13 @@ async function startGame() {
     showGameControlsOverlay();
     playPooledSound('jump', 'sounds/gameOver.wav');
 
-    const initialLevelData = levelManager.getCurrentLevelData(); // Relies on LevelManager having the correct level loaded
+    const initialLevelData = levelManager.getCurrentLevelData(); 
     if (!initialLevelData) {
         Logger.error("CRITICAL: Initial level data missing in startGame. Attempting to load default.");
         const defaultLoaded = await levelManager.loadDefaultLevel();
         if (!defaultLoaded) {
             displayAssetLoadError("Error: Could not retrieve any level data.");
-            gameState.setWelcomeScreenActive(true); // Go back to welcome screen
+            gameState.setWelcomeScreenActive(true); 
             return;
         }
     }
@@ -176,12 +181,11 @@ async function startGame() {
     gameState.setGamePaused(false);
     gameState.setGameStopped(false);
     if (animationFrameId === null) {
-        resizeCanvasAndCalculateScale();
         lastTimestamp = performance.now();
         gameTimeAccumulator = 0;
         animationFrameId = requestAnimationFrame(gameLoop);
     } else {
-        lastTimestamp = performance.now();
+        lastTimestamp = performance.now(); 
         gameTimeAccumulator = 0;
     }
     Logger.info(`[Main.js startGame] Game initialized. Starting game loop.`);
@@ -190,9 +194,7 @@ async function startGame() {
 function setupSceneFromLevelData(levelData) {
     Logger.info("[Main.js] Setting up scene from level data:", levelData);
     activeGameElements = [];
-
-    // Load backgrounds first
-    backgroundManager.loadLevelBackgrounds(levelData, assetManager); // Added
+    backgroundManager.loadLevelBackgrounds(levelData, assetManager); 
 
     if (levelData.playerStart) {
         tilemapRenderer = new TilemapRenderer(levelData.tilemap, TILE_CONFIG);
@@ -211,7 +213,6 @@ function setupSceneFromLevelData(levelData) {
         });
     }
 
-    // Setup Collectibles
     if (levelData.collectibles && Array.isArray(levelData.collectibles)) {
         levelData.collectibles.forEach(collectibleInfo => {
             if (collectibleInfo.type && typeof collectibleInfo.x === 'number' && typeof collectibleInfo.y === 'number') {
@@ -281,9 +282,12 @@ function setPauseState(pause) {
 const MAX_DELTA_TIME = 1 / 60;
 
 function prepareLevelSelectScreen() {
-    levelSelectScreenButtons = []; // Clear existing buttons
-    if (!canvas) {
-        Logger.error("[Main.js] Canvas not ready for level select screen prep.");
+    levelSelectScreenButtons = []; 
+    // --- MODIFICATION START: Added detailed logging for canvas dimensions ---    
+    Logger.info(`[prepareLevelSelectScreen] Checking canvas. Canvas exists: ${!!canvas}. Canvas width: ${canvas?.width}, height: ${canvas?.height}`);
+    // --- MODIFICATION END ---
+    if (!canvas || canvas.width < 10 || canvas.height < 10) { 
+        Logger.warn("[prepareLevelSelectScreen] Canvas not ready or too small for level select screen prep.");
         return;
     }
     const availableLevels = levelManager.getAvailableLevels();
@@ -337,6 +341,10 @@ function prepareLevelSelectScreen() {
 }
 
 function drawWelcomeScreenUI(ctx) {
+    if (!canvas || !ctx || canvas.width < 10 || canvas.height < 10) {
+        return;
+    }
+
     ctx.fillStyle = '#2c3e50'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -379,6 +387,7 @@ function drawWelcomeScreenUI(ctx) {
 
 function gameLoop(currentTimestamp) {
     if (!animationFrameId && !gameState.welcomeScreenActive && gameState.gameStopped) {
+        Logger.info("[gameLoop] Exiting: animationFrameId is null, game is stopped and not on welcome screen.");
         return;
     }
 
@@ -386,24 +395,26 @@ function gameLoop(currentTimestamp) {
     let deltaTime = (currentTimestamp - lastTimestamp) / 1000;
     lastTimestamp = currentTimestamp;
 
-    // Always clear the entire canvas at the beginning of a frame's drawing operations
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // <--- ADD THIS HERE
+    if (!ctx) { 
+        Logger.error("[gameLoop] ctx is not valid. Cannot clear or draw.");
+        if (animationFrameId) animationFrameId = requestAnimationFrame(gameLoop); 
+        return;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState.welcomeScreenActive) {
-        // ctx.clearRect was already here, which is fine, but the one above is more encompassing
         drawWelcomeScreenUI(ctx);
         animationFrameId = requestAnimationFrame(gameLoop);
         return;
     }
 
-    if (gameState.gameStopped) { // Should this also have a clearRect if it draws something? Or just return?
-        animationFrameId = null;
-        // If gameStopped means a black screen or some "Game Stopped" message, draw it here.
-        // Otherwise, if it's just an early exit, the clearRect above is fine.
+    if (gameState.gameStopped) {
+        Logger.info("[gameLoop] Game is stopped. Not updating or drawing game elements.");
+        animationFrameId = null; 
         return;
     }
 
-    deltaTime = Math.min(deltaTime, MAX_DELTA_TIME * 5);
+    deltaTime = Math.min(deltaTime, MAX_DELTA_TIME * 5); 
 
     if (!gameState.gamePaused) {
         gameTimeAccumulator += deltaTime;
@@ -414,9 +425,6 @@ function gameLoop(currentTimestamp) {
         }
     }
 
-    // The clearRect is now at the top, so it covers all drawing paths below for an active frame.
-
-    // --- STAGE 1: PARALLAX BACKGROUNDS ---
     if (backgroundManager && window.camera) {
         ctx.save();
         ctx.translate(globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
@@ -425,7 +433,6 @@ function gameLoop(currentTimestamp) {
         ctx.restore();
     }
 
-    // --- STAGE 2: GAME WORLD (Tilemap, Sprites) ---
     ctx.save();
     ctx.translate(globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
     ctx.scale(globals.sceneState.currentScale, globals.sceneState.currentScale);
@@ -440,14 +447,7 @@ function gameLoop(currentTimestamp) {
     });
     ctx.restore();
 
-    // --- STAGE 3: UI / HUD ---
-    // if (hudManager) {
-    //     hudManager.draw(ctx);
-    // }
-
     if (globals.DEBUG_MODE && window.camera && typeof window.camera.drawDeadZoneDebug === 'function') {
-        // Ensure debug draw happens in the correct coordinate space
-        // Usually screen space, or explicitly transformed if drawing world debug info
         window.camera.drawDeadZoneDebug(ctx, globals.sceneState.currentScale, globals.sceneState.currentOffsetX, globals.sceneState.currentOffsetY);
     }
 
@@ -457,14 +457,13 @@ function gameLoop(currentTimestamp) {
 
 function updateGameElements(deltaTime, currentTime) {
     let elementsToKeep = [];
-    let activeCollectables = []; // Store active collectables
+    let activeCollectables = []; 
 
     activeGameElements.forEach(element => {
         if (element.isActive) {
             element.update(deltaTime, currentTime, activeGameElements);
-            if (element.isActive) { // Re-check isActive in case update() changed it
+            if (element.isActive) { 
                 elementsToKeep.push(element);
-                // Ensure element has entityType before checking
                 if (element.entityType && element.entityType === 'collectable') { 
                     activeCollectables.push(element);
                 }
@@ -472,24 +471,17 @@ function updateGameElements(deltaTime, currentTime) {
         }
     });
 
-    // Player-Collectable Collision
     if (player && player.isActive && activeCollectables.length > 0) {
         activeCollectables.forEach(collectable => {
-            // Collectable is already confirmed active from the loop above
-            // AABB collision check (ensure player and collectable have x,y,width,height)
             if (player.x < collectable.x + collectable.width &&
                 player.x + player.width > collectable.x &&
                 player.y < collectable.y + collectable.height &&
                 player.y + player.height > collectable.y) {
                 
                 collectable.onCollect(player);
-                // onCollect in Collectable.js sets its own isActive to false.
-                // The filter at the end of this function will handle removal.
             }
         });
     }
-
-    // Filter out elements that became inactive (e.g., collected items)
     activeGameElements = elementsToKeep.filter(el => el.isActive);
 }
 
@@ -509,10 +501,10 @@ function stopGame() {
     activeGameElements = [];
     tilemapRenderer = null;
     player = null;
-    // backgroundManager.layers = []; // Optionally clear layers here too if desired upon full stop
 
     hideGameControlsOverlay();
     hidePauseMenu();
+    initializeWelcomeScreenButtons(); 
 
     if (!animationFrameId) {
       lastTimestamp = performance.now();
@@ -560,107 +552,14 @@ function showWelcomeScreenHtml() {
 }
 
 function hideWelcomeScreenHtml() {}
-
-function resizeCanvasAndCalculateScale() {
-    if (!canvas) { Logger.error("Canvas not found for resize."); return; }
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    let screenAspectRatio = canvas.width / canvas.height;
-    if (screenAspectRatio > globals.nativeGameAspectRatio) {
-        globals.sceneState.currentScale = canvas.height / globals.nativeGameHeight;
-        globals.sceneState.currentOffsetX = (canvas.width - (globals.nativeGameWidth * globals.sceneState.currentScale)) / 2;
-        globals.sceneState.currentOffsetY = 0;
-    } else {
-        globals.sceneState.currentScale = canvas.width / globals.nativeGameWidth;
-        globals.sceneState.currentOffsetX = 0;
-        globals.sceneState.currentOffsetY = (canvas.height - (globals.nativeGameHeight * globals.sceneState.currentScale)) / 2;
+ 
+function initializeWelcomeScreenButtons() {
+    if (!canvas || canvas.width < 10 || canvas.height < 10) { 
+        Logger.warn("[initializeWelcomeScreenButtons] Canvas not ready or too small. Deferring button creation.");
+        return;
     }
-}
-
-function handleGlobalKeyDown(event) {
-    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) return;
-
-    switch (event.key) {
-        case 'Escape':
-            if (globals.settingsOverlay?.classList.contains('visible')) {
-                document.getElementById('closeSettingsButton')?.click();
-            } else if (gameState.welcomeScreenActive) {
-                if (gameState.welcomeView === 'levelSelect') {
-                    gameState.setWelcomeView('main'); 
-                } else {
-                    Logger.info("[Keyboard] Escape on Main Welcome Screen. No specific action.");
-                }
-            } else if (!gameState.gameStopped) {
-                if (gameState.gamePaused) resumeButtonFunc(); else pauseGame();
-            }
-            event.preventDefault();
-            break;
-        case 'Enter':
-            if (gameState.welcomeScreenActive && gameState.welcomeView === 'main' && isGameReadyToStart) {
-                 if (!(globals.settingsOverlay?.classList.contains('visible'))) {
-                    Logger.info("[Keyboard] Enter on Main Welcome Screen. Starting game.");
-                    startGame(); 
-                } else {
-                    Logger.info("[Keyboard] Enter on Welcome, but settings open. No action.");
-                }
-            } else if (gameState.welcomeScreenActive && !isGameReadyToStart) {
-                Logger.info("[Keyboard] Enter on Welcome, but game not ready to start.");
-            } else if (gameState.welcomeScreenActive && gameState.welcomeView === 'levelSelect') {
-                Logger.info("[Keyboard] Enter on Level Select screen. No specific action (use mouse/touch).");
-            }
-            if(gameState.welcomeScreenActive) event.preventDefault();
-            break;
-    }
-}
-
-function handleCanvasMouseMove(event) {
-    if (!canvas) return; 
-    const rect = canvas.getBoundingClientRect();
-    mousePos.x = event.clientX - rect.left;
-    mousePos.y = event.clientY - rect.top;
-}
-
-function handleCanvasClick(event) {
-    if (!canvas || !gameState.welcomeScreenActive) return; 
-
-    let buttonsToCheck = [];
-    if (gameState.welcomeView === 'main') {
-        buttonsToCheck = welcomeScreenButtons;
-    } else if (gameState.welcomeView === 'levelSelect') {
-        buttonsToCheck = levelSelectScreenButtons;
-    }
-
-    buttonsToCheck.forEach(button => {
-        if (button.isMouseOver(mousePos)) {
-            if (button.text === "Start Game") {
-                button.triggerClick(isGameReadyToStart);
-            } else {
-                button.triggerClick(true); 
-            }
-        }
-    });
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-    initializeCoreGameSystems();
-    canvas = document.getElementById('gameArea');
-    if (canvas) {
-        ctx = canvas.getContext('2d');
-        window.addEventListener('resize', resizeCanvasAndCalculateScale, false);
-        resizeCanvasAndCalculateScale(); 
-        canvas.addEventListener('mousemove', handleCanvasMouseMove); 
-        canvas.addEventListener('click', handleCanvasClick);
-    } else {
-        Logger.error("CRITICAL: Canvas element 'gameArea' not found."); return;
-    }
-
-    uiElements.loadingMessage = document.getElementById('loadingMessage');
-    uiElements.gameLoadError = document.getElementById('gameLoadError');
-
-    if (uiElements.loadingMessage) {
-        uiElements.loadingMessage.style.display = 'block';
-    }
+    Logger.info(`[initializeWelcomeScreenButtons] Initializing with canvas size: ${canvas.width}x${canvas.height}`);
+    welcomeScreenButtons = []; 
 
     const buttonWidth = Math.min(canvas.width * 0.4, 250);
     const buttonHeight = Math.min(canvas.height * 0.1, 60);
@@ -702,6 +601,134 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         { normalColor: '#ffc107', hoverColor: '#e0a800', fontSize: Math.min(buttonHeight * 0.4, 24) }
     ));
+    Logger.info(`[initializeWelcomeScreenButtons] Created ${welcomeScreenButtons.length} buttons.`);
+}
+
+function resizeCanvasAndCalculateScale() {
+    Logger.info(`[resizeCanvasAndCalculateScale] Called.`);
+    if (!canvas) { 
+        Logger.error("[resizeCanvasAndCalculateScale] Canvas not found for resize."); 
+        return; 
+    }
+    
+    const currentWindowInnerWidth = window.innerWidth;
+    const currentWindowInnerHeight = window.innerHeight;
+    Logger.info(`[resizeCanvasAndCalculateScale] window.innerWidth = ${currentWindowInnerWidth}, window.innerHeight = ${currentWindowInnerHeight}`);
+
+    if (currentWindowInnerWidth < 10 || currentWindowInnerHeight < 10) { 
+        Logger.warn(`[resizeCanvasAndCalculateScale] window.innerWidth or window.innerHeight is too small (${currentWindowInnerWidth}x${currentWindowInnerHeight}). Aborting resize to prevent 0x0 canvas. Will rely on subsequent resize event.`);
+        return; 
+    }
+
+    canvas.width = currentWindowInnerWidth;
+    canvas.height = currentWindowInnerHeight;
+    Logger.info(`[resizeCanvasAndCalculateScale] Set canvas.width = ${canvas.width}, canvas.height = ${canvas.height}`);
+
+    if (gameState.welcomeScreenActive) {
+        Logger.info("[resizeCanvasAndCalculateScale] Welcome screen is active, re-initializing buttons for new canvas size.");
+        initializeWelcomeScreenButtons();
+        prepareLevelSelectScreen(); 
+    }
+
+    let screenAspectRatio = canvas.width / canvas.height;
+    if (screenAspectRatio > globals.nativeGameAspectRatio) {
+        globals.sceneState.currentScale = canvas.height / globals.nativeGameHeight;
+        globals.sceneState.currentOffsetX = (canvas.width - (globals.nativeGameWidth * globals.sceneState.currentScale)) / 2;
+        globals.sceneState.currentOffsetY = 0;
+    } else {
+        globals.sceneState.currentScale = canvas.width / globals.nativeGameWidth;
+        globals.sceneState.currentOffsetX = 0;
+        globals.sceneState.currentOffsetY = (canvas.height - (globals.nativeGameHeight * globals.sceneState.currentScale)) / 2;
+    }
+    Logger.info(`[resizeCanvasAndCalculateScale] Calculated globals.sceneState.currentScale = ${globals.sceneState.currentScale}`);
+    Logger.info(`[resizeCanvasAndCalculateScale] OffsetX = ${globals.sceneState.currentOffsetX}, OffsetY = ${globals.sceneState.currentOffsetY}`);
+}
+
+function handleGlobalKeyDown(event) {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) return;
+
+    switch (event.key) {
+        case 'Escape':
+            if (globals.settingsOverlay?.classList.contains('visible')) {
+                document.getElementById('closeSettingsButton')?.click();
+            } else if (gameState.welcomeScreenActive) {
+                if (gameState.welcomeView === 'levelSelect') {
+                    gameState.setWelcomeView('main'); 
+                } else {
+                    Logger.info("[Keyboard] Escape on Main Welcome Screen. No specific action.");
+                }
+            } else if (!gameState.gameStopped) {
+                if (gameState.gamePaused) resumeButtonFunc(); else pauseGame();
+            }
+            event.preventDefault();
+            break;
+        case 'Enter':
+            if (gameState.welcomeScreenActive && gameState.welcomeView === 'main' && isGameReadyToStart) {
+                 if (!(globals.settingsOverlay?.classList.contains('visible'))) {
+                    Logger.info("[Keyboard] Enter on Main Welcome Screen. Starting game.");
+                    startGame(); 
+                } else {
+                    Logger.info("[Keyboard] Enter on Welcome, but settings open. No action.");
+                }
+            } else if (gameState.welcomeScreenActive && !isGameReadyToStart) {
+                Logger.info("[Keyboard] Enter on Welcome, but game not ready to start.");
+            } else if (gameState.welcomeScreenActive && gameState.welcomeView === 'levelSelect') {
+                Logger.info("[Keyboard] Enter on Level Select screen. No specific action (use mouse/touch).");
+            }
+            if(gameState.welcomeScreenActive) event.preventDefault();
+            break;
+    }
+}
+
+function handleCanvasMouseMove(event) {
+    if (!canvas) return; 
+    const rect = canvas.getBoundingClientRect();
+    // Scale mouse coordinates to match canvas's internal resolution
+    mousePos.x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    mousePos.y = (event.clientY - rect.top) * (canvas.height / rect.height);
+}
+
+function handleCanvasClick(event) {
+    if (!canvas || !gameState.welcomeScreenActive) return; 
+
+    let buttonsToCheck = [];
+    if (gameState.welcomeView === 'main') {
+        buttonsToCheck = welcomeScreenButtons;
+    } else if (gameState.welcomeView === 'levelSelect') {
+        buttonsToCheck = levelSelectScreenButtons;
+    }
+
+    buttonsToCheck.forEach(button => {
+        if (button.isMouseOver(mousePos)) {
+            if (button.text === "Start Game") {
+                button.triggerClick(isGameReadyToStart);
+            } else {
+                button.triggerClick(true); 
+            }
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    initializeCoreGameSystems();
+    canvas = document.getElementById('gameArea');
+    if (canvas) {
+        ctx = canvas.getContext('2d');
+        window.addEventListener('resize', resizeCanvasAndCalculateScale, false);
+        resizeCanvasAndCalculateScale(); 
+
+        canvas.addEventListener('mousemove', handleCanvasMouseMove); 
+        canvas.addEventListener('click', handleCanvasClick);
+    } else {
+        Logger.error("CRITICAL: Canvas element 'gameArea' not found."); return;
+    }
+
+    uiElements.loadingMessage = document.getElementById('loadingMessage');
+    uiElements.gameLoadError = document.getElementById('gameLoadError');
+
+    if (uiElements.loadingMessage) {
+        uiElements.loadingMessage.style.display = 'block';
+    }
 
     globals.setWelcomeBackgroundImageContainer?.(document.getElementById('welcomeBackgroundImageContainer'));
     globals.setControlsOverlay?.(document.getElementById('gameControlsOverlay'));
@@ -742,15 +769,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         { key: 'bg_sky_calm', type: 'image', path: 'images/backgrounds/sky_calm.png' },
         { key: 'bg_mountains_distant', type: 'image', path: 'images/backgrounds/mountains_distant.png' },
         { key: 'bg_forest_close', type: 'image', path: 'images/backgrounds/forest_close.png' },
-        { key: 'bg_clouds_fast', type: 'image', path: 'images/backgrounds/clouds_fast.png' }//no prefixed assets/ ... that will cause 404
+        { key: 'bg_clouds_fast', type: 'image', path: 'images/backgrounds/clouds_fast.png' }
     ];
 
     if (!assetsManifest || assetsManifest.length === 0) {
         Logger.warn("Asset manifest empty. Proceeding.");
         assetsToLoadCount = 0; assetsSuccessfullyLoadedCount = 0; assetsFailedToLoadCount = 0;
-        loadPrerequisitesAndEnableStart();
+        loadPrerequisitesAndEnableStart(); 
     } else {
         await processManifest(assetsManifest, singleAssetProcessed, allAssetsProcessed); 
+    }
+
+    if (welcomeScreenButtons.length === 0) {
+        Logger.info("DOMContentLoaded: Assets processed or manifest empty. Attempting late button initialization if needed.");
+        initializeWelcomeScreenButtons();
     }
 
     if (!animationFrameId) {

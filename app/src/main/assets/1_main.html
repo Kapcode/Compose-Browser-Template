@@ -3,78 +3,62 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Ai Questions Game</title>
     <style>
-        html,
-        body {
+        html {
+            height: 100%;
+            overflow: hidden;
             margin: 0;
             padding: 0;
-            min-width: 100%;
-            min-height: 100%;
-            overflow: hidden;
-            display: flex;
-            justify-content: center; /* Optional */
-            align-items: center; /* Optional */
-            /* Important to prevent scrollbars if the game container is exactly screen size */
-            background-color: #222;
-            /* Optional: color for area outside the game on wider screens */
         }
-        h1 {
-        /* Basic styling for the heading */
-            text-align: center;
-        }
-        .game-wrapper {
 
-            width: 100vw;
-            /* Take full viewport width */
-            height: 100vh;
-            /* Take full viewport height */
-            display: flex;
-            /* Optional: padding around the game area */
-            padding-left: 5px;
-            background-color: #000000;
-            /* Optional: color for the game area */
-        }
-        .game-aspect-ratio-box {
-            width: 100%;
-            /* Fill the game-wrapper */
+        body {
             height: 100%;
-            /* Fill the game-wrapper */
+            margin: 0;
+            padding: 0;
+            display: flex; 
+            flex-direction: column; 
+            background-color: transparent !important;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+
+        .game-wrapper {
+            width: 100%; 
+            flex-grow: 1; 
             display: flex;
-            /* This will center the SVG */
+            justify-content: center;
+            align-items: center;
+            background-color: #444444 !important; /* Dark gray for wrapper debug - KEEP THIS FOR NOW */
+            padding: 5px; 
+            box-sizing: border-box;
         }
 
         #gameArea {
-        /* This is your SVG */
+            width: 90%;  
+            height: 90%; 
+            background-color: #000000; /* Changed from RED !important to black (or original game color) */
+            border: 3px solid #1e8339;   /* Original game border, removed !important */
             display: block;
-
             user-select: none;
             touch-action: none;
-            /* Prevent default touch actions like scrolling */
-            /* Border styles */
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
             box-sizing: border-box;
-            border-style: solid;
-            border-color: #1e8339;
-            border-width: 3px;
-            background-color: #000000;
         }
 
+        /* Other existing styles for overlays, buttons, etc. */
+        h1 {
+            text-align: center;
+        }
         #gameArea text {
             pointer-events: none;
         }
-
         button {
-        /* Basic button styling */
             display: block;
             margin: 20px auto;
             padding: 10px 20px;
             font-size: 16px;
         }
-
         .score-splat {
             position: fixed;
             font-family: Impact, sans-serif;
@@ -86,39 +70,26 @@
             transition: all 0.5s ease-out;
             z-index: 1000;
         }
-
         .score-splat.show {
             opacity: 1;
             transform: translateY(-50px);
         }
-
-
         .game-controls-overlay.visible {
-            display: flex; /* Or whatever display type you need when visible */
-            /* If you used visibility: hidden above, then here: visibility: visible; */
+            display: flex; 
         }
         .game-controls-overlay {
             position: absolute;
             top: 2%;
-            /* Distance from the top of .game-wrapper */
             left: 92%;
             z-index: 9999 !important;
-            /* Start the left edge of the overlay at the horizontal center of .game-wrapper */
             transform: translateX(-15%);
-            /* Ensure it's above other elements like the Game Area */
-            /* For styling - adjust as needed */
             background-color: rgba(65, 120, 56, 0.59);
-            /* Semi-transparent background */
             padding: 8px 15px;
             border-radius: 8px;
             display: flex;
-            /* To lay out buttons inside side-by-side */
             gap: 10px;
-            /* Space between buttons */
         }
-
         .game-controls-overlay button {
-        /* Basic button styling - adjust as needed */
             padding: 5px 10px;
             background-color: #333;
             color: white;
@@ -126,12 +97,9 @@
             border-radius: 5px;
             cursor: pointer;
         }
-
         .game-controls-overlay button:hover {
             background-color: #444;
         }
-
-        /* Styling for the Pause Menu Overlay */
         .pause-menu-overlay {
             position: absolute;
             top: 0;
@@ -139,80 +107,50 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
-            /* Semi-transparent dark background */
             z-index: 20;
-            /* Higher z-index to be on top of game controls if they are separate */
             display: flex;
-            /* For centering the content */
             justify-content: center;
             align-items: center;
-            /* display: none; /* Initially hidden - handled by JS or inline style */
         }
-
-        /* .pause-menu-content is now .content-box for styling consistency */
-        /* Original .pause-menu-content styles if needed for specificity:
-        .pause-menu-content {
-            background-color: #333; 
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            color: white;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-        } */
-
-        .content-box h2 { /* For pause menu title - ensure it targets correctly if inside .content-box */
+        .content-box h2 { 
             margin-top: 0;
             margin-bottom: 20px;
         }
-
-        /* .content-box button rules will apply if buttons are direct children, or use descendant selector */
-        /* General styling for full-screen overlays (like welcome and pause) */
         .screen-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            display: flex; /* For centering the content box */
+            display: flex; 
             justify-content: center;
             align-items: center;
-            /* display: none; /* Initially hidden - handled by JS or inline style */
         }
-
-        /* Specific for the Welcome Screen Overlay */
         #welcomeScreenOverlay {
-            z-index: 10; /* Ensure it's above the background but potentially below other things if needed */
-            /* No background-color here if you want the body/backgroundImageContainer to show through */
+            z-index: 10; 
         }
-
-        /* Reusable style for the content boxes (welcome, pause, game over) */
         .content-box {
-            background-color: #333; /* Darker background for the menu box */
+            background-color: #333; 
             padding: 30px;
             border-radius: 8px;
             text-align: center;
             color: white;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            max-width: 80%; /* Prevent it from getting too wide on large screens */
-            width: 300px; /* Or a specific width */
-            z-index: 11; /* Ensure content box is above its own overlay's pseudo-elements if any */
+            max-width: 80%; 
+            width: 300px; 
+            z-index: 11; 
         }
-
-        .content-box h1 { /* Specific for welcome screen title */
+        .content-box h1 { 
             margin-top: 0;
             margin-bottom: 15px;
-            font-size: 2.5em; /* Larger title */
+            font-size: 2.5em; 
         }
-
-        /* .content-box h2 is already defined above, should be fine */
-
-        .content-box p { /* For tagline or other text */
+        .content-box p { 
             margin-bottom: 25px;
             font-size: 1.1em;
         }
-
         .content-box button {
-            display: block; /* Stack buttons vertically */
+            display: block; 
             width: 100%;
             padding: 12px;
             margin-bottom: 10px;
@@ -220,31 +158,23 @@
             background-color: #555;
             color: white;
             border: 1px solid #777;
-            border-radius: 5px; /* Added for slightly softer buttons */
+            border-radius: 5px; 
             cursor: pointer;
-            transition: background-color 0.2s ease-in-out; /* Smooth hover effect */
+            transition: background-color 0.2s ease-in-out; 
         }
-
         .content-box button:hover {
-            background-color: #666; /* Slightly lighter on hover */
+            background-color: #666; 
         }
-
         .content-box button:last-child {
             margin-bottom: 0;
         }
-
-
-        /* --- Styling for the Pause Menu (using some shared classes) --- */
         #pauseMenuOverlay {
-            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent dark background for pause */
-            z-index: 20; /* Higher z-index to be on top of game controls and game canvas */
+            background-color: rgba(0, 0, 0, 0.7); 
+            z-index: 20; 
         }
-
-        /* --- Settings Overlay Styles (adapted) --- */
-
         .settings-overlay {
             position: fixed;
-            inset: 0; /* top, right, bottom, left = 0 */
+            inset: 0; 
             background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: center;
@@ -254,28 +184,25 @@
             visibility: hidden;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
-
         .settings-overlay.visible {
             opacity: 1;
             visibility: visible;
         }
-
         .settings-panel {
-            background-color: #333; /* Darker theme example */
+            background-color: #333; 
             color: #eee;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
-            width: 75vw; /* Default width, good for portrait */
-            max-width: 800px; /* Max width it can grow to */
-            max-height: 75vh; /* Max height before scrolling kicks in */
-            overflow-y: auto; /* Enable vertical scrolling for the panel */
+            width: 75vw; 
+            max-width: 800px; 
+            max-height: 75vh; 
+            overflow-y: auto; 
             scrollbar-width: thin; 
             scrollbar-color: #888 #333;
             display: flex;
             flex-direction: column;
         }
-
         .settings-header {
             display: flex;
             justify-content: space-between;
@@ -284,12 +211,10 @@
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
-
         .settings-header h2 {
             margin: 0;
             font-size: 1.5em;
         }
-
         #closeSettingsButton {
             background: none;
             border: none;
@@ -297,11 +222,9 @@
             font-size: 1.8em;
             cursor: pointer;
         }
-
         .settings-content {
             flex-grow: 1; 
         }
-
         .setting-item {
             display: flex; 
             flex-wrap: wrap; 
@@ -312,13 +235,11 @@
             background-color: #444;
             border-radius: 5px;
         }
-
         .setting-item label {
             margin-right: 10px;
             flex-basis: 120px; 
             flex-shrink: 0;
         }
-
         .setting-item input[type="text"],
         .setting-item input[type="range"],
         .setting-item select {
@@ -330,7 +251,6 @@
             background-color: #555;
             color: #eee;
         }
-
         .setting-item input[type="range"] {
             flex-basis: calc(100% - 60px); 
         }
@@ -339,15 +259,12 @@
             flex-basis: 50px; 
             text-align: right;
         }
-
-
         .settings-footer {
             border-top: 1px solid #555;
             padding-top: 15px;
             margin-top: 15px;
             text-align: right;
         }
-
         #saveSettingsButton {
             padding: 10px 20px;
             background-color: #007bff;
@@ -356,11 +273,9 @@
             border-radius: 5px;
             cursor: pointer;
         }
-
         #saveSettingsButton:hover {
             background-color: #0056b3;
         }
-
         @media (orientation: landscape) and (max-height: 500px) { 
             .settings-panel {
                 width: 70vw;
@@ -373,20 +288,17 @@
                 padding-bottom: 20px; 
             }
         }
-
         @media (min-width: 768px) { 
             .settings-panel {
                 width: 60vw;
                 max-width: 600px;
             }
         }
-
         .toggle {
             position: absolute;
             cursor: pointer;
             opacity: 0;
         }
-
         .toggle + label {
             --toggle-color: #FFF;
             --toggle-bg-color: #C6D0CC;
@@ -395,7 +307,6 @@
             line-height: 2.5rem;
             cursor: pointer;
         }
-
         .toggle + label:before {
             content: "";
             box-sizing: border-box;
@@ -408,7 +319,6 @@
             background-color: var(--toggle-bg-color);
             transition: background-color 200ms;
         }
-
         .toggle + label:after {
             content: "";
             position: absolute;
@@ -424,16 +334,13 @@
             cursor: pointer;
             transition: transform 200ms;
         }
-
         .toggle:checked + label {
             --toggle-color: #FFFFFF;
             --toggle-bg-color: #20b776;
         }
-
         .toggle:checked + label:after {
             transform: translate(2rem, 0);
         }
-
         #welcomeBackgroundImageContainer {
             position: fixed; 
             top: 0;
@@ -443,26 +350,14 @@
             overflow: hidden; 
             z-index: 1; 
         }
-
         #welcomeBackgroundImageContainer img {
             width: 100%;    
             height: 100%;   
             object-fit: contain; 
             object-position: center center; 
         }
-
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100vw; 
-            height: 100vh; 
-            box-sizing: border-box;
-            touch-action: none;
-        }
-
     </style>
 </head>
-
 <body>
 
     <div id="gameWrapper" class="game-wrapper">
