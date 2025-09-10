@@ -1,5 +1,4 @@
-A Template for starting out with jetpack compose. This template also provides a simple way to display a webview, and page turning, with a small game about learning with ai prompts.
-
+A Template for starting out with jetpack compose. This template also provides a simple way to display a webview.
 This project has evolved so much. so. This is a 2d game template. Built to run on android webview, and run in a browser.
 
 
